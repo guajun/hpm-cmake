@@ -1,5 +1,12 @@
 .hpm/
 build/
+.hpm-cmake-install-*/
+dist/
 CMakeUserPresets.json
 .vscode/
 *.log
+/examples/*/.hpm-cmake/
+/examples/*/hpm-lock.json
+/examples/*/CMakePresets.json
+/examples/*/.gitignore
+/examples/*/*_build/

@@ -11,6 +11,14 @@ function Get-HpmLockHash {
     (Get-FileHash -LiteralPath (Join-Path $script:ProjectRoot 'hpm-lock.json') -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Get-HpmSdkChanges {
+    param([string]$Sdk)
+    $changes = @(& git -C $Sdk status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect SDK checkout.' }
+    # Official IDE generation imports Python helpers and writes bytecode caches.
+    $changes | Where-Object { $_ -notmatch '^\?\? (?:.*/)?__pycache__/[^/]+\.pyc$' }
+}
+
 function Invoke-HpmNative {
     param([string]$Executable, [string[]]$Arguments)
     & $Executable @Arguments
@@ -93,6 +101,6 @@ function Assert-HpmReady {
     $stamp = Join-Path $script:PrivateRoot 'synced-lock.sha256'
     if (-not (Test-Path -LiteralPath $stamp) -or
         (Get-Content -LiteralPath $stamp -Raw).Trim() -ne (Get-HpmLockHash)) {
-        throw 'Dependencies are missing or the lock changed. Run ./scripts/sync.ps1.'
+        throw 'Dependencies are missing or the lock changed. Run the project hpm-cmake sync.ps1.'
     }
 }

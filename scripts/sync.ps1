@@ -26,8 +26,8 @@ $sdkHead = & git -C $sdk rev-parse HEAD
 if ($LASTEXITCODE -ne 0 -or $sdkHead -ne $lock.sdk.commit) {
     throw 'Existing SDK does not match hpm-lock.json. Move .hpm/sdk aside, then sync again.'
 }
-$sdkChanges = & git -C $sdk status --porcelain
-if ($LASTEXITCODE -ne 0 -or $sdkChanges) { throw 'SDK contains local changes. Preserve them before synchronizing.' }
+$sdkChanges = @(Get-HpmSdkChanges $sdk)
+if ($sdkChanges.Count) { throw 'SDK contains local changes. Preserve them before synchronizing.' }
 
 $toolchain = Join-Path $script:PrivateRoot 'toolchain'
 if (-not (Test-Path -LiteralPath $toolchain)) {
@@ -74,4 +74,4 @@ if (-not (Test-Path -LiteralPath $pythonStamp) -or
 Invoke-HpmNative (Join-Path $python 'python.exe') @('-c', "import sys, yaml, jinja2, markupsafe; print('SDK Python:', sys.version.split()[0]); assert sys.flags.isolated")
 Invoke-HpmNative (Join-Path $toolchain 'bin/riscv32-unknown-elf-gcc.exe') @('-dumpfullversion')
 Set-Content -LiteralPath $stamp -Value (Get-HpmLockHash) -Encoding ASCII
-Write-Host 'Project dependencies are ready. Run: cmake --preset debug'
+Write-Host 'Project dependencies are ready. Use the imported CMake preset: default.'

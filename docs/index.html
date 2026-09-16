@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hpm-cmake · 官方工程，项目隔离环境</title>
+<style>
+:root{color-scheme:light;--ink:#17211d;--green:#11694d;--muted:#53675d}*{box-sizing:border-box}body{margin:0;background:#f6f8f5;color:var(--ink);font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif}main,header,footer{max-width:1060px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;border-bottom:1px solid #d6e1da}a{color:var(--green);text-underline-offset:4px}h1{font-size:clamp(34px,5vw,58px);line-height:1.2;margin:20px 0}h2{font-size:26px}p{max-width:800px}section{padding:30px 0;border-bottom:1px solid #d6e1da}.lead{font-size:20px;color:var(--muted)}.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{padding:22px;background:white;border:1px solid #d6e1da;border-radius:8px}.num{color:var(--green);font-weight:700}pre{padding:22px;border-radius:8px;background:#15251e;color:#e5f5e9;overflow:auto;font-size:14px;line-height:1.8}code{font-family:Consolas,monospace}.note{color:var(--muted)}footer{font-size:14px;color:var(--muted)}@media(max-width:720px){.flow{grid-template-columns:1fr}header{gap:20px}}
+</style>
+<header><strong>hpm-cmake</strong><nav><a href="https://github.com/guajun/hpm-cmake">GitHub</a> · <a href="https://github.com/guajun/hpm-cmake/releases">Releases</a></nav></header>
+<main>
+<section><p class="num">HPMICRO · NATIVE CMAKE</p><h1>官方工程。<br>项目自己的构建环境。</h1><p class="lead">用 HPM 官方生成器选择板卡与应用，再接入固定版本的 SDK、GCC 和私有 Python。日常直接运行 CMake，环境随命令生效。</p><p><a href="https://github.com/guajun/hpm-cmake#readme">完整使用说明</a> · <a href="https://github.com/hpmicro/sdk_env/releases">下载官方生成器</a></p></section>
+<section><h2>生成 → 接入 → 开发</h2><div class="flow"><div class="card"><span class="num">01 / 官方生成</span><p>在 start_gui 或 generate_project 中选择板卡、应用和构建类型，生成 CMake 构建目录。</p></div><div class="card"><span class="num">02 / 导入配置</span><p>读取 CMakeCache，添加项目环境和 Presets。保留应用 CMakeLists、源码及 BSP。</p></div><div class="card"><span class="num">03 / 原生构建</span><p>同步锁定依赖，在项目内构建。板卡配置继续来自厂商 SDK 或你自己的 BSP。</p></div></div></section>
+<section><h2>从 clone 接入</h2><pre>git clone https://github.com/guajun/hpm-cmake.git C:\tools\hpm-cmake
+&amp; C:\tools\hpm-cmake\hpm-cmake.ps1 import `
+    -Project C:\firmware\my-app `
+    -BuildDirectory C:\firmware\my-app\hpm6e00evk_build</pre><p class="note">路径和板名是示例。Project 指向应用源码目录，BuildDirectory 指向官方工具生成的构建目录。</p></section>
+<section><h2>直接使用 release</h2><pre>&amp; ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) `
+    -Project C:\firmware\my-app `
+    -BuildDirectory C:\firmware\my-app\hpm6e00evk_build</pre><p>可加 <code>-Version v0.1.0</code> 固定封装版本。安装器在工程内暂存归档、校验 SHA-256 并完成接入，不安装全局命令。</p><p class="note">SDK ZIP 没有 Git 信息时，补充 <code>-SdkRevision</code> 指定其真实官方 release tag 或 commit。已有 Presets 或导入文件不会被自动覆盖。</p></section>
+<section><h2>接入后</h2><pre>.\.hpm-cmake\sync.ps1
+.\.hpm-cmake\doctor.ps1
+cmake --preset default
+cmake --build --preset default --parallel</pre><p><code>default</code> 沿用官方选择的构建组合。依赖位于 <code>.hpm/</code>，可提交的环境脚本位于 <code>.hpm-cmake/</code>。无需 uv，也不修改用户或系统环境变量。</p></section>
+<section><h2>支持范围</h2><p>当前支持 Windows x64、PowerShell 5.1+、HPM 官方 GCC 13.2.0；需要已有 Git、CMake 3.24+ 和 Ninja。已验证 HPM6E00EVK blink，HPM6750EVKMINI 用于额外构建验证。其他工具链版本会明确报错。</p><p>项目初始化与 BSP 由官方工具负责。hpm-cmake 负责环境接入和构建兼容；物理探针、烧录与调试单独管理。</p></section>
+</main><footer>hpm-cmake · <a href="https://github.com/guajun/hpm-cmake">源码与文档</a> · 参考 <a href="https://guajun.github.io/wch-cmake/">wch-cmake</a> 的工作流程</footer>
+</html>

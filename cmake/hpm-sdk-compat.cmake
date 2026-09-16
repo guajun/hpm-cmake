@@ -1,6 +1,9 @@
 # The pinned SDK passes map/script paths as raw target_link_libraries flags.
 # Move just these two flags to target_link_options, which quotes spaced paths.
 # Keep the vendor checkout and all selected linker scripts unchanged.
+if(NOT DEFINED APP_ELF_NAME OR NOT TARGET ${APP_ELF_NAME} OR NOT TARGET ${HPM_SDK_LIB_ITF})
+  message(FATAL_ERROR "HPM SDK targets were not found. This adapter requires the native HPM CMake build.")
+endif()
 get_target_property(_hpm_app_links ${APP_ELF_NAME} LINK_LIBRARIES)
 set(_hpm_app_links_fixed "")
 foreach(_hpm_link IN LISTS _hpm_app_links)

@@ -1,111 +1,111 @@
 # hpm-cmake
 
-HPMicro SDK 的项目级环境封装，使用厂商原生 CMake。第一版面向 **Windows x64 / HPM6E00EVK**，包含可直接构建的 blink 和独立项目初始化脚本。
+**官方工具生成工程，hpm-cmake 接入项目隔离环境，日常继续使用原生 CMake。**
 
-设计参考 [wch-cmake](https://github.com/guajun/wch-cmake) 与 uv 的项目隔离理念。构建所需的 SDK、GCC、Python 都属于当前项目；不修改用户/系统环境变量，不执行全局 pip 安装，不依赖 uv，也不需要将固件工程变成 Python 项目。
+参考 [wch-cmake](https://guajun.github.io/wch-cmake/) 的工作流程。本项目不生成 BSP、不提供芯片选择向导，也不把 HPM6E00 blink 作为所有项目的初始化模板。板卡、应用、链接脚本和构建类型由官方工具及应用自己的 CMake 决定。
 
-## 快速开始
+文档入口：[guajun.github.io/hpm-cmake](https://guajun.github.io/hpm-cmake/)。当前宿主平台：Windows x64、PowerShell 5.1+、Git、CMake 3.24+、Ninja。
 
-前置工具：64 位 Windows、PowerShell 5.1+、Git、CMake 3.24+、Ninja。当前验证基线为 CMake 4.3.3、Ninja 1.13.2。使用已有的官方安装即可。
+## 1. 用官方工具准备工程
 
-```powershell
-git clone https://github.com/guajun/hpm-cmake.git
-cd hpm-cmake
-.\scripts\sync.ps1
-.\scripts\doctor.ps1
-cmake --preset debug
-cmake --build --preset debug
-```
-
-固件输出为 `build/debug/output/demo.elf`、`demo.bin`。LED 亮、灭各 250 ms。
-
-无需激活终端。`CMakePresets.json` 仅为构建进程设置 SDK、工具链路径；SDK 的 Python 解释器通过 `python_exec` 显式指定。构建 preset 继承对应 configure preset 的环境。原生 `find_package(hpm-sdk)` 负责芯片参数、启动代码、驱动和链接脚本。
-
-固定版本 SDK 将两个带路径的链接参数放在 `target_link_libraries` 中，导致路径含空格时链接失败。`cmake/hpm-sdk-compat.cmake` 在应用侧把 map 文件和链接脚本参数移到 `target_link_options`，由 CMake 正确引用路径；不修改厂商 SDK，也不复制链接脚本。默认关闭 SDK 自动发现的系统 ccache。
-
-## 独立工程
-
-在本仓库中执行：
+从 [HPMicro sdk_env 发布页](https://github.com/hpmicro/sdk_env/releases) 下载官方环境，使用 `start_gui.exe` 选择 SDK、板卡、应用及构建类型，点击 **Generate**。自定义应用和 BSP 按官方的 [user_template 指南](https://github.com/hpmicro/sdk_env/blob/main/user_template/README_en.md) 组织。也可以使用官方 `generate_project` 命令：
 
 ```powershell
-.\hpm-cmake.ps1 init -Project C:\firmware\my-blink
+# 在官方 SDK 命令窗口中，切到包含应用 CMakeLists.txt 的目录
+generate_project -b hpm6e00evk -t flash_xip
 ```
 
-目标必须为空。生成的工程包含构建脚本、源代码和依赖清单，可单独提交 Git，并按上述命令准备依赖和构建。它不依赖本仓库的安装位置。已有工程可参考本模板接入，第一版不自动覆盖或迁移已有工程。
+这里的板名只是示例，换成官方生成器选定的板。GUI 的输出目录可自选；上述 CLI 示例会生成 `hpm6e00evk_build/`。接入需要它生成的 `CMakeCache.txt`，不要求额外编译一次。此目录与应用源码目录是两个独立参数。
 
-## 依赖与隔离
+官方生成器由用户按厂商指南单独获取。本项目不重新打包 GUI，也不执行厂商的系统配置脚本。
 
-| 组件 | 固定版本 | 本地目录 |
-| --- | --- | --- |
-| HPM SDK | `375f7cbcd19b0d43453b47ef7c4487a0b2689b37` | `.hpm/sdk` |
-| HPM RISC-V GCC | 13.2.0 / 发布包 2023.10.18 | `.hpm/toolchain` |
-| CPython embeddable x64 | 3.14.5 | `.hpm/python` |
-| SDK Python 包 | PyYAML 6.0.3、Jinja2 3.1.6、MarkupSafe 3.0.3 | `.hpm/python/Lib/site-packages` |
+## 2. 接入 hpm-cmake
 
-`hpm-lock.json` 记录官方来源、SDK commit、压缩包和 wheel 的 SHA-256。`sync.ps1` 校验下载内容，暂存解压成功后才移入正式目录。SDK 是独立 Git checkout，保持厂商文件原样；它不作为本仓库的 submodule，也不提交到本仓库。
-
-Python 只用于 SDK 构建辅助脚本，固件本身不需要 Python。使用 Python 官方 embeddable 发行包及固定的预编译 wheel，保留 `_pth` 隔离模式，只列出运行时自己的标准库及依赖目录；不加载系统 Python 包或 `PYTHONPATH`。三个固定 wheel 可直接解压，无 pip 安装钩子或额外构建步骤。
-
-`.hpm/`、`build/` 和机器专用 `CMakeUserPresets.json` 被 Git 忽略。CMake、Ninja 是宿主工具，检查最低版本并记录验证版本，尚未由项目自动安装。SEGGER 软件及 USB 驱动也单独管理。
-
-### 离线、手动下载与更新
-
-完成一次准备后，可用 `.\scripts\sync.ps1 -Offline` 验证及使用已有 checkout 和下载缓存。也可以按照清单的 URL 手动下载压缩包/wheel，放到 `.hpm/downloads/<sha256前12位>-<原文件名>`，随后离线同步。SDK 可按官方仓库下载，放入 `.hpm/sdk`，需为清单指定 commit 的干净 Git checkout。
-
-普通 configure/build 不联网、不更新依赖。升级时显式修改清单，并保存、移走相应旧目录，再执行 sync；首版遇到版本不一致或 SDK 本地修改会报错，不覆盖现有依赖。Python 环境记录完整清单 hash，清单变更后也需重新准备 `.hpm/python`。最后用 `cmake --preset debug --fresh` 重新配置。
-
-## 构建预设
-
-| Preset | 用途 | HPM_BUILD_TYPE |
-| --- | --- | --- |
-| `debug` | RAM 调试 | `ram` |
-| `release` | RAM 优化构建 | `ram` |
-| `flash-debug` | 外部 Flash XIP | `flash_xip` |
-
-每个 preset 使用独立构建目录。修改应用代码在 `src/`，增加源文件用 SDK 原生 `sdk_app_src()`。修改开发板时编辑 preset 中的 `BOARD` 并核对板级接口，其他板卡尚未验证。
-
-## J-Link / JTAG
-
-从 [SEGGER 官网](https://www.segger.com/downloads/jlink/)安装 J-Link 软件及驱动。请先枚举探针，使用实际序列号：
+### 从 clone 接入
 
 ```powershell
-@('ShowEmuList', 'q') | & 'C:\Program Files\SEGGER\JLink\JLink.exe' -NoGui 1
+git clone https://github.com/guajun/hpm-cmake.git C:\tools\hpm-cmake
+& C:\tools\hpm-cmake\hpm-cmake.ps1 import `
+    -Project C:\firmware\my-app `
+    -BuildDirectory C:\firmware\my-app\hpm6e00evk_build
 ```
 
-RAM 运行（`123456789` 为示例，替换为实际序列号）：
+### 从 release 接入
 
 ```powershell
-.\scripts\jlink.ps1 -Mode ram -Serial 123456789 -DryRun
-.\scripts\jlink.ps1 -Mode ram -Serial 123456789
+& ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) `
+    -Project C:\firmware\my-app `
+    -BuildDirectory C:\firmware\my-app\hpm6e00evk_build
 ```
 
-默认设备 `HPM6E80XVMX`、JTAG、4000 kHz；可通过参数修改设备、速度和 J-Link 路径。脚本从 ELF 读取入口地址，加载 RAM 后设置 PC 并运行。RAM 模式掉电后不会保留程序。
+添加 `-Version v0.1.0` 可选择固定发布版本。也可手动从 [Releases](https://github.com/guajun/hpm-cmake/releases) 下载 `hpm-cmake.zip` 和 `checksums.txt`，校验、解压后运行同一个 `hpm-cmake.ps1 import` 命令。
 
-Flash XIP：
+安装器将版本归档暂存于目标工程中，校验 SHA-256 后接入并清理暂存目录。不安装全局命令。
+
+**SDK 版本来源：** 如果原 SDK 是干净的 Git checkout，自动锁定其实际 commit。如果使用官方 SDK ZIP，两个入口都需要补充 `-SdkRevision v1.12.1`（替换为该 ZIP 的真实版本或完整 commit）；release tag 会在接入时解析为固定 commit。ZIP 模式不声称已验证原目录与该 commit 的内容完全相同，修改过的 BSP 应保存在自己的工程中。
+
+## 3. 准备依赖并构建
+
+进入应用源码目录：
 
 ```powershell
-cmake --preset flash-debug
-cmake --build --preset flash-debug
-.\scripts\jlink.ps1 -Mode flash -Serial 123456789 -DryRun
-.\scripts\jlink.ps1 -Mode flash -Serial 123456789
+.\.hpm-cmake\sync.ps1
+.\.hpm-cmake\doctor.ps1
+cmake --preset default
+cmake --build --preset default --parallel
 ```
 
-Flash 命令会写入应用使用的 Flash 区域。`-DryRun` 仅生成并显示脚本；执行时通过 `-SelectEmuBySN` 选择探针，日志在 `.hpm/sessions/`。请关闭占用该探针的 Commander/GDB 会话。编译成功、下载运行成功和断电重启成功是分别验证的事项。
+无需激活终端。`default` 保留官方选择的板卡和构建类型，包括旧生成器的 `CMAKE_BUILD_TYPE=flash_xip` 写法，以及新工程的 `CMAKE_BUILD_TYPE=debug` + `HPM_BUILD_TYPE=flash_xip` 写法，不自行推断 RAM/Flash。可以在提交的 CMakePresets 中继续增加应用需要的组合。
 
-## 厂商资料与来源
+原始生成目录继续保留，新构建输出到 `build/hpm-default/`。默认 SDK 应用输出为 `output/demo.elf`、`demo.bin`、`demo.map`；应用设置 `APP_NAME` 时仍由原生 SDK 决定名字。
 
-- [HPM SDK 官方仓库](https://github.com/hpmicro/hpm_sdk) / [本项目固定 commit](https://github.com/hpmicro/hpm_sdk/tree/375f7cbcd19b0d43453b47ef7c4487a0b2689b37)
-- [HPM SDK 安装指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)
-- [原生 CMake 快速开始](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html)
-- [RISC-V GNU 工具链发布页](https://github.com/hpmicro/riscv-gnu-toolchain/releases/tag/2023.10.18)
-- [厂商 Windows SDK 环境包](https://github.com/hpmicro/sdk_env)
-- [Python 3.14.5 官方下载与校验值](https://www.python.org/downloads/release/python-3145/)
-- [Python embeddable 文档](https://docs.python.org/3/using/windows.html#the-embeddable-package)
+## 接入边界
 
-本仓库脚本和模板采用 MIT License。下载的厂商 SDK、GCC、Python、Python 包和 SEGGER 软件分别遵循各自许可证，不适用本仓库许可证；不将这些下载内容重新发布到本仓库。
+接入会添加：
 
-## 验证
+```text
+my-app/
+├── CMakeLists.txt        # 原文件不改
+├── src/                 # 原文件不改
+├── boards/              # 如有自定义 BSP，仍归应用所有
+├── CMakePresets.json     # 从官方构建配置生成，可提交
+├── hpm-lock.json         # 固定依赖来源与校验值，可提交
+├── .hpm-cmake/           # 环境脚本、CMake 钩子、导入记录，可提交
+├── .hpm/                # SDK/GCC/Python/下载缓存，不提交
+└── build/hpm-default/   # 不提交
+```
 
-本仓库可运行 `powershell.exe -NoProfile -File .\tests\verify.ps1`。该检查使用已准备的依赖，验证 RAM Debug、RAM Release、Flash Debug 构建，故意注入错误的 HPM/Python 环境变量，检查未同步依赖的报错和初始化的文件保护，并比较进程、用户及系统环境快照。它不会连接探针。GitHub Actions 在干净 Windows runner 上准备依赖并运行同一检查。
+`.gitignore` 只追加本项目的本地依赖/输出规则。已有 `CMakePresets.json`、`hpm-lock.json` 或 `.hpm-cmake` 时停止，避免覆盖现有配置；原工程已有 CMake project/toolchain 钩子时也要求显式整合。接入不是源码迁移器，应用的 `CMakeLists.txt` 和源文件保持逐字节不变。
 
-2026-09-16 本机验证：含空格的 OneDrive 路径构建通过；HPM6E00EVK 配合 J-Link EDU Mini / JTAG / Commander 9.46 的 RAM blink 已实测闪烁；Flash 下载及 J-Link 校验通过，开发板断电重启后自动继续闪烁。
+导入读取 `BOARD`、`CMAKE_BUILD_TYPE`、`HPM_BUILD_TYPE`、板卡搜索路径、自定义链接脚本、`CONFIG_*`、`CUSTOM_*`、`EXTRA_*`、堆栈设置、常用编译/链接 flags 及其他命令行 cache 输入。SDK 内的路径重定位到项目私有 SDK；自定义 BSP/链接脚本路径转成相对于应用目录的路径。请把自定义文件与应用一起提交，兄弟目录布局需一起保留。导入结果可在 `.hpm-cmake/import.json` 和 Presets 中审阅。
+
+`CMAKE_PROJECT_INCLUDE` 加载兼容钩子；链接参数处理延迟到配置结束，以适配 SDK 内部的 `project()` 调用。固定 SDK 的 map/链接脚本参数在含空格路径下引用不正确，封装在目标属性层修正，不改 SDK 文件、不替换链接脚本。默认关闭自动拾取系统 ccache。
+
+## 依赖管理
+
+- **SDK：** 使用原构建选定的官方 commit，下载到 `.hpm/sdk`。Git checkout 有代码修改时拒绝自动接入；官方 IDE 生成产生的未跟踪 Python 字节码缓存不算源代码修改。
+- **GCC：** 当前依赖配置支持官方 HPM GCC 13.2.0 / 发布包 2023.10.18。接入检查原编译器版本和二进制 SHA-256，遇到其他工具链明确停止，不静默换编译器。
+- **Python：** SDK 构建辅助工具使用官方 CPython embeddable 3.14.5，以及 PyYAML 6.0.3、Jinja2 3.1.6、MarkupSafe 3.0.3。隔离运行时放在 `.hpm/python`，不加载系统 Python 包。固件不是 Python 项目，不需要 uv、pip 全局安装或 `pyproject.toml`。
+- **CMake / Ninja：** 复用宿主的官方安装。已在 CMake 4.3.3 和 4.4.3、Ninja 1.13.2 验证。
+
+依赖清单包含下载地址和 SHA-256；sync 只写入应用的 `.hpm/`。普通 configure/build 不下载或更新依赖。已有下载缓存和 SDK checkout 后可执行 `.\.hpm-cmake\sync.ps1 -Offline`。
+
+版本不匹配或 SDK 源码被修改时停止，首版不自动替换现有依赖目录。升级时保存、移走旧目录，更新锁定信息后重新 sync，并用 `cmake --preset default --fresh` 清除旧配置缓存。
+
+## 示例与验证范围
+
+`examples/hpm6e00-blink/` 仅是实测参考应用，按官方生成流程配置后再 import。它不参与 importer 的源码输出。该板使用 J-Link EDU Mini / JTAG / Commander 9.46，2026-09-16 已验证 RAM blink、Flash 烧录校验及断电重启后闪烁。示例中的 `run-jlink.ps1` 是该板的辅助脚本，不安装到任意导入工程。通用构建接入与物理探针操作分开。
+
+开发验证：先在本工具仓库执行 `scripts/sync.ps1` 准备测试依赖，再运行 `powershell.exe -NoProfile -File tests/verify.ps1`。测试会获取固定 commit 的官方 `generate_project.cmd`，分别生成 HPM6E00EVK Flash 和 HPM6750EVKMINI RAM 工程，验证源码不变、clone/打包归档接入、含空格路径、环境隔离、锁定检查及原生构建。第二块板仅做构建验证，没有硬件实测。测试不连接探针。
+
+## 官方资料
+
+- [sdk_env / start_gui 官方说明](https://github.com/hpmicro/sdk_env)
+- [官方自定义 Board/App 指南](https://kb.hpmicro.com/2024/10/08/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7%E8%87%AA%E5%AE%9A%E4%B9%89board%E5%92%8Capp%E5%B7%A5%E7%A8%8B/)
+- [官方 SDK 安装指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)
+- [原生 CMake 指南](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html)
+- [HPM SDK 源码](https://github.com/hpmicro/hpm_sdk)
+- [GCC 发布包](https://github.com/hpmicro/riscv-gnu-toolchain/releases/tag/2023.10.18)
+- [Python 官方下载及校验值](https://www.python.org/downloads/release/python-3145/)
+
+本仓库采用 MIT License。下载的 SDK、编译器、Python、Python 包、官方生成器及 SEGGER 软件分别遵循各自许可证，不作为本项目 release 的二进制内容发布。

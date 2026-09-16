@@ -1,0 +1,21 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate tag and package
+        shell: pwsh
+        run: |
+          if ("v$((Get-Content VERSION -Raw).Trim())" -ne $env:GITHUB_REF_NAME) { throw 'Tag and VERSION differ' }
+          ./scripts/package.ps1
+      - name: Publish scripts and checksums
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME dist/hpm-cmake.zip dist/checksums.txt dist/install.ps1 --verify-tag --title "hpm-cmake $env:GITHUB_REF_NAME" --generate-notes

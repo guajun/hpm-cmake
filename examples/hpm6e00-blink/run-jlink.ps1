@@ -8,11 +8,11 @@ param(
     [string]$JLinkPath = 'C:\Program Files\SEGGER\JLink\JLink.exe',
     [switch]$DryRun
 )
-. "$PSScriptRoot/common.ps1"
+. "$PSScriptRoot/.hpm-cmake/common.ps1"
 Assert-HpmReady
 if (-not (Test-Path -LiteralPath $JLinkPath -PathType Leaf)) { throw "J-Link Commander not found: $JLinkPath" }
-$preset = if ($Mode -eq 'ram') { 'debug' } else { 'flash-debug' }
-$image = Join-Path $script:ProjectRoot "build/$preset/output/demo.elf"
+$preset = 'default'
+$image = Join-Path $script:ProjectRoot 'build/hpm-default/output/demo.elf'
 if (-not (Test-Path -LiteralPath $image)) { throw "Build first: cmake --preset $preset; cmake --build --preset $preset" }
 $readelf = Join-Path $script:PrivateRoot 'toolchain/bin/riscv32-unknown-elf-readelf.exe'
 $header = & $readelf -h $image
