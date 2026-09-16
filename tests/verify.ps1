@@ -67,6 +67,9 @@ try {
         $ErrorActionPreference = 'Stop'
         if ($LASTEXITCODE -eq 0 -or $stale -notmatch 'lock changed') { throw 'CMake accepted an unsynchronized lock.' }
     } finally { [IO.File]::WriteAllBytes($lockPath, $originalLock) }
+    # Verify recovery after the expected failure. Also leave a successful native
+    # exit code for CI shells that propagate LASTEXITCODE after invoking a script.
+    Invoke-Checked cmake @('--preset', 'debug')
 } finally {
     foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process') }
     Pop-Location
