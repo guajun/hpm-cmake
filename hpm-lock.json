@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "platform": "windows-x86_64",
+  "sdk": {
+    "url": "https://github.com/hpmicro/hpm_sdk.git",
+    "commit": "375f7cbcd19b0d43453b47ef7c4487a0b2689b37",
+    "description": "Known working HPM6E00EVK baseline, v1.12.0 plus three commits"
+  },
+  "toolchain": {
+    "version": "13.2.0",
+    "release": "2023.10.18",
+    "url": "https://github.com/hpmicro/riscv-gnu-toolchain/releases/download/2023.10.18/rv32imac_zicsr_zifencei_multilib_b_ext-win.zip",
+    "sha256": "794ae8a337db01372fffb5b4abee082ad73c6ef9b665430145ba34b167b7f3f4",
+    "archiveRoot": "rv32imac_zicsr_zifencei_multilib_b_ext-win"
+  },
+  "python": {
+    "version": "3.14.5",
+    "url": "https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip",
+    "sha256": "ba6bd811c4eedb19195cf275770ef127e893d63701e24152606e2cb76f6d876a",
+    "pth": "python314._pth",
+    "stdlib": "python314.zip",
+    "packages": [
+      {
+        "name": "PyYAML", "version": "6.0.3",
+        "url": "https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl",
+        "sha256": "4a2e8cebe2ff6ab7d1050ecd59c25d4c8bd7e6f400f5f82b96557ac0abafd0ac"
+      },
+      {
+        "name": "Jinja2", "version": "3.1.6",
+        "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+        "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+      },
+      {
+        "name": "MarkupSafe", "version": "3.0.3",
+        "url": "https://files.pythonhosted.org/packages/28/52/182836104b33b444e400b14f797212f720cbc9ed6ba34c800639d154e821/markupsafe-3.0.3-cp314-cp314-win_amd64.whl",
+        "sha256": "bdc919ead48f234740ad807933cdf545180bfbe9342c2bb451556db2ed958581"
+      }
+    ]
+  },
+  "hostTools": {
+    "cmakeMinimum": "3.24.0",
+    "cmakeTested": "4.3.3",
+    "ninjaTested": "1.13.2"
+  }
+}

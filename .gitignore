@@ -1,0 +1,5 @@
+.hpm/
+build/
+CMakeUserPresets.json
+.vscode/
+*.log

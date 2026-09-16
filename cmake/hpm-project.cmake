@@ -1,0 +1,23 @@
+# Only validate project dependencies here. Downloads belong to scripts/sync.ps1.
+get_filename_component(HPM_PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+file(SHA256 "${HPM_PROJECT_ROOT}/hpm-lock.json" _hpm_lock_hash)
+set(_hpm_stamp "${HPM_PROJECT_ROOT}/.hpm/synced-lock.sha256")
+if(NOT EXISTS "${_hpm_stamp}")
+  message(FATAL_ERROR "Dependencies are not ready. Run ./scripts/sync.ps1 first.")
+endif()
+file(READ "${_hpm_stamp}" _hpm_synced_hash)
+string(STRIP "${_hpm_synced_hash}" _hpm_synced_hash)
+if(NOT _hpm_synced_hash STREQUAL _hpm_lock_hash)
+  message(FATAL_ERROR "Dependency lock changed. Run ./scripts/sync.ps1, then configure with --fresh.")
+endif()
+foreach(_hpm_file IN ITEMS sdk/cmake/hpm-sdk-config.cmake toolchain/bin/riscv32-unknown-elf-gcc.exe python/python.exe)
+  if(NOT EXISTS "${HPM_PROJECT_ROOT}/.hpm/${_hpm_file}")
+    message(FATAL_ERROR "Missing .hpm/${_hpm_file}. Run ./scripts/sync.ps1.")
+  endif()
+endforeach()
+# Explicitly bind the variable used by this SDK's cmake/python.cmake.
+set(python_exec "${HPM_PROJECT_ROOT}/.hpm/python/python.exe" CACHE FILEPATH "SDK private Python" FORCE)
+if(NOT "$ENV{HPM_SDK_BASE}" STREQUAL "${HPM_PROJECT_ROOT}/.hpm/sdk" OR
+   NOT "$ENV{GNURISCV_TOOLCHAIN_PATH}" STREQUAL "${HPM_PROJECT_ROOT}/.hpm/toolchain")
+  message(FATAL_ERROR "Use the project's CMake presets to select its isolated SDK and compiler.")
+endif()

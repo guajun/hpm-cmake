@@ -1,0 +1,21 @@
+name: Windows build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Prepare project dependencies
+        shell: pwsh
+        run: ./scripts/sync.ps1
+      - name: Verify Windows PowerShell 5.1 and native builds
+        shell: powershell
+        run: ./tests/verify.ps1
+      - name: Verify PowerShell 7
+        shell: pwsh
+        run: ./scripts/doctor.ps1
