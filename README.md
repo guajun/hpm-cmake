@@ -17,6 +17,8 @@ generate_project -b hpm6e00evk -t flash_xip
 
 这里的板名只是示例，换成官方生成器选定的板。GUI 的输出目录可自选；上述 CLI 示例会生成 `hpm6e00evk_build/`。接入需要它生成的 `CMakeCache.txt`，不要求额外编译一次。此目录与应用源码目录是两个独立参数。
 
+应用源码应位于 SDK 外部。使用 SDK 自带 sample 时，先按官方模板方式复制到自己的工作目录，再让官方工具针对该目录生成；import 会拒绝直接向 SDK 内的 samples 写入封装文件。
+
 官方生成器由用户按厂商指南单独获取。本项目不重新打包 GUI，也不执行厂商的系统配置脚本。
 
 ## 2. 接入 hpm-cmake

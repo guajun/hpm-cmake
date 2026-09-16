@@ -43,6 +43,10 @@ $board = Read-Cache 'BOARD'
 if ($board -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]*$') { throw 'Invalid BOARD in original cache.' }
 $sdk = Split-Path -Parent (Read-Cache 'hpm-sdk_DIR')
 if (-not (Test-Path -LiteralPath (Join-Path $sdk 'cmake/hpm-sdk-config.cmake'))) { throw 'Original SDK cannot be located from the build cache.' }
+$sdkPrefix = [IO.Path]::GetFullPath($sdk).TrimEnd('\') + '\'
+if ([IO.Path]::GetFullPath($destination).StartsWith($sdkPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Keep the application outside the SDK. Copy the official sample/user_template to your workspace, then generate its build again.'
+}
 $lock = Get-Content -LiteralPath (Join-Path $repository 'hpm-lock.json') -Raw | ConvertFrom-Json
 if (Test-Path -LiteralPath (Join-Path $sdk '.git')) {
     $sdkCommit = & git -C $sdk rev-parse HEAD
