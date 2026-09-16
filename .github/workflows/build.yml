@@ -19,3 +19,6 @@ jobs:
       - name: Verify PowerShell 7
         shell: pwsh
         run: ./scripts/doctor.ps1
+      - name: Verify website command generation
+        shell: pwsh
+        run: node tests/command.test.cjs

@@ -1,0 +1,14 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { build, fields, quote } = require('../docs/command.js');
+const command = build({ Project: "C:\\Jane's projects\\blink $(whoami)", BuildDirectory:'build', Version:'v0.2.0' }, 'zh');
+assert(command.includes("-Project 'C:\\Jane''s projects\\blink $(whoami)'"));
+assert(command.endsWith("-Language 'zh' -NonInteractive"));
+assert(!/[\r\n]/.test(command));
+assert.throws(() => quote('line1\nline2'));
+assert.throws(() => quote('path\0value'));
+assert.equal(quote('C:\\folder\\'), "'C:\\folder\\'");
+const html=fs.readFileSync(require.resolve('../docs/index.html'),'utf8');
+for (const field of fields) assert(html.includes(`id="${field}"`), `missing ${field}`);
+assert(!html.includes('git clone'));
+console.log('PASS: quoted literal PowerShell arguments, one-line non-interactive command, all input fields.');

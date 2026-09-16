@@ -3,7 +3,9 @@
 param(
     [Parameter(Mandatory)][string]$Project,
     [Parameter(Mandatory)][string]$BuildDirectory,
-    [string]$SdkRevision
+    [string]$SdkRevision,
+    [string]$SdkRoot,
+    [string]$ToolchainRoot
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -29,7 +31,7 @@ function Read-Cache([string]$Name) {
 if ([IO.Path]::GetFullPath((Read-Cache 'CMAKE_HOME_DIRECTORY')) -ne [IO.Path]::GetFullPath($destination)) {
     throw 'The selected build directory belongs to a different application.'
 }
-foreach ($name in @('CMakePresets.json', 'hpm-lock.json', '.hpm-cmake')) {
+foreach ($name in @('CMakePresets.json', 'hpm-lock.json', '.hpm-cmake', 'activate.ps1')) {
     if (Test-Path -LiteralPath (Join-Path $destination $name)) {
         throw "Existing $name is preserved. Review or move the previous integration before importing again."
     }
@@ -41,7 +43,8 @@ foreach ($name in @('CMAKE_PROJECT_INCLUDE', 'CMAKE_PROJECT_INCLUDE_BEFORE', 'CM
 }
 $board = Read-Cache 'BOARD'
 if ($board -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]*$') { throw 'Invalid BOARD in original cache.' }
-$sdk = Split-Path -Parent (Read-Cache 'hpm-sdk_DIR')
+$originalSdk = Split-Path -Parent (Read-Cache 'hpm-sdk_DIR')
+$sdk = if ($SdkRoot) { (Resolve-Path -LiteralPath $SdkRoot).Path } else { $originalSdk }
 if (-not (Test-Path -LiteralPath (Join-Path $sdk 'cmake/hpm-sdk-config.cmake'))) { throw 'Original SDK cannot be located from the build cache.' }
 $sdkPrefix = [IO.Path]::GetFullPath($sdk).TrimEnd('\') + '\'
 if ([IO.Path]::GetFullPath($destination).StartsWith($sdkPrefix, [StringComparison]::OrdinalIgnoreCase)) {
@@ -70,7 +73,8 @@ $requirements = @(Get-Content -LiteralPath (Join-Path $sdk 'scripts/requirements
 if (($requirements | Sort-Object) -join ',' -ne 'jinja2,pyyaml') {
     throw 'This SDK has different Python requirements. Update and validate the dependency profile before import.'
 }
-$compiler = Read-Cache 'CMAKE_C_COMPILER'
+$originalCompiler = Read-Cache 'CMAKE_C_COMPILER'
+$compiler = if ($ToolchainRoot) { Join-Path (Resolve-Path -LiteralPath $ToolchainRoot).Path 'bin/riscv32-unknown-elf-gcc.exe' } else { $originalCompiler }
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'The original compiler is missing.' }
 $version = & $compiler -dumpfullversion
 if ($LASTEXITCODE -ne 0 -or $version -ne $lock.toolchain.version) {
@@ -78,14 +82,14 @@ if ($LASTEXITCODE -ne 0 -or $version -ne $lock.toolchain.version) {
 }
 # Validate the actual compiler, not merely its banner (other RISC-V distributions
 # can carry the same version while using different patches or multilibs).
-if ((Get-FileHash -LiteralPath $compiler -Algorithm SHA256).Hash -ne 'ae5c103862ed011d63c4db6108b3411536745c4e774946256daada5dea9fb7b2') {
+if ((Get-FileHash -LiteralPath $compiler -Algorithm SHA256).Hash -ne $lock.toolchain.executableSha256) {
     throw 'Original compiler differs from the locked official HPM GCC package.'
 }
 $toolchainRoot = Split-Path -Parent (Split-Path -Parent $compiler)
 function Rebase-Value([string]$Value) {
     $value = $Value -replace '\\', '/'
-    $sdkPrefix = ($sdk -replace '\\','/').TrimEnd('/')
-    $gccPrefix = ($toolchainRoot -replace '\\','/').TrimEnd('/')
+    $sdkPrefix = ($originalSdk -replace '\\','/').TrimEnd('/')
+    $gccPrefix = ((Split-Path -Parent (Split-Path -Parent $originalCompiler)) -replace '\\','/').TrimEnd('/')
     foreach ($mapping in @(@($sdkPrefix, '${sourceDir}/.hpm/sdk'), @($gccPrefix, '${sourceDir}/.hpm/toolchain'))) {
         $value = [regex]::Replace($value, [regex]::Escape($mapping[0]) + '(?=/|$|;)', $mapping[1].Replace('$','$$'), [Text.RegularExpressions.RegexOptions]::IgnoreCase)
     }
@@ -137,13 +141,14 @@ $metadata = [ordered]@{
 $utf8 = New-Object Text.UTF8Encoding($false)
 $payload = Join-Path $destination '.hpm-cmake'
 New-Item -ItemType Directory -Path (Join-Path $payload 'cmake') -Force | Out-Null
-foreach ($name in @('common.ps1','sync.ps1','doctor.ps1')) {
+foreach ($name in @('common.ps1','sync.ps1','doctor.ps1','activate.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $payload
 }
 foreach ($name in @('hpm-project-hook.cmake','hpm-sdk-compat.cmake')) {
     Copy-Item -LiteralPath (Join-Path $repository "cmake/$name") -Destination (Join-Path $payload 'cmake')
 }
 Copy-Item -LiteralPath (Join-Path $repository 'LICENSE') -Destination (Join-Path $payload 'LICENSE')
+Copy-Item -LiteralPath (Join-Path $repository 'templates/activate.ps1') -Destination (Join-Path $destination 'activate.ps1')
 [IO.File]::WriteAllText((Join-Path $payload 'import.json'), ($metadata | ConvertTo-Json -Depth 12) + "`n", $utf8)
 [IO.File]::WriteAllText((Join-Path $destination 'hpm-lock.json'), ($lock | ConvertTo-Json -Depth 12) + "`n", $utf8)
 [IO.File]::WriteAllText((Join-Path $destination 'CMakePresets.json'), ($presets | ConvertTo-Json -Depth 12) + "`n", $utf8)

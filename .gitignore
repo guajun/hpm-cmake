@@ -8,5 +8,6 @@ CMakeUserPresets.json
 /examples/*/.hpm-cmake/
 /examples/*/hpm-lock.json
 /examples/*/CMakePresets.json
+/examples/*/activate.ps1
 /examples/*/.gitignore
 /examples/*/*_build/

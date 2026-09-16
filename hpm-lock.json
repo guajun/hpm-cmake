@@ -8,6 +8,7 @@
   },
   "toolchain": {
     "version": "13.2.0",
+    "executableSha256": "ae5c103862ed011d63c4db6108b3411536745c4e774946256daada5dea9fb7b2",
     "release": "2023.10.18",
     "url": "https://github.com/hpmicro/riscv-gnu-toolchain/releases/download/2023.10.18/rv32imac_zicsr_zifencei_multilib_b_ext-win.zip",
     "sha256": "794ae8a337db01372fffb5b4abee082ad73c6ef9b665430145ba34b167b7f3f4",

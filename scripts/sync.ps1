@@ -22,12 +22,7 @@ if (-not (Test-Path -LiteralPath $sdk)) {
     Invoke-HpmNative git @('-C', $checkout, 'checkout', '--detach', $lock.sdk.commit)
     Move-HpmInstall $checkout $sdk
 }
-$sdkHead = & git -C $sdk rev-parse HEAD
-if ($LASTEXITCODE -ne 0 -or $sdkHead -ne $lock.sdk.commit) {
-    throw 'Existing SDK does not match hpm-lock.json. Move .hpm/sdk aside, then sync again.'
-}
-$sdkChanges = @(Get-HpmSdkChanges $sdk)
-if ($sdkChanges.Count) { throw 'SDK contains local changes. Preserve them before synchronizing.' }
+Assert-HpmSdk $sdk $lock
 
 $toolchain = Join-Path $script:PrivateRoot 'toolchain'
 if (-not (Test-Path -LiteralPath $toolchain)) {
@@ -42,10 +37,12 @@ if (-not (Test-Path -LiteralPath $toolchain)) {
     Move-HpmInstall $payload $toolchain
 }
 $compilerStamp = Join-Path $toolchain '.hpm-artifact.sha256'
-if (-not (Test-Path -LiteralPath $compilerStamp) -or
-    (Get-Content -LiteralPath $compilerStamp -Raw).Trim() -ne $lock.toolchain.sha256) {
+$binding = Get-HpmLocalBinding
+if (-not $binding -and (-not (Test-Path -LiteralPath $compilerStamp) -or
+    (Get-Content -LiteralPath $compilerStamp -Raw).Trim() -ne $lock.toolchain.sha256)) {
     throw 'Existing compiler does not match the lock. Move .hpm/toolchain aside, then sync again.'
 }
+Assert-HpmCompiler (Join-Path $toolchain 'bin/riscv32-unknown-elf-gcc.exe') $lock
 
 $python = Join-Path $script:PrivateRoot 'python'
 if (-not (Test-Path -LiteralPath $python)) {
@@ -63,14 +60,22 @@ if (-not (Test-Path -LiteralPath $python)) {
     # embeddable runtime isolated: no site import, user packages, or PYTHONPATH.
     $paths = @($lock.python.stdlib, '.', 'Lib/site-packages')
     Set-Content -LiteralPath (Join-Path $payload $lock.python.pth) -Value $paths -Encoding ASCII
-    Set-Content -LiteralPath (Join-Path $payload '.hpm-lock.sha256') -Value (Get-HpmLockHash) -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $payload '.hpm-python.sha256') -Value (Get-HpmPythonHash) -Encoding ASCII
     Move-HpmInstall $payload $python
 }
-$pythonStamp = Join-Path $python '.hpm-lock.sha256'
-if (-not (Test-Path -LiteralPath $pythonStamp) -or
-    (Get-Content -LiteralPath $pythonStamp -Raw).Trim() -ne (Get-HpmLockHash)) {
+$pythonStamp = Join-Path $python '.hpm-python.sha256'
+if ((Test-Path -LiteralPath $pythonStamp) -and
+    (Get-Content -LiteralPath $pythonStamp -Raw).Trim() -ne (Get-HpmPythonHash)) {
     throw 'Existing Python environment does not match the lock. Move .hpm/python aside, then sync again.'
 }
+Assert-HpmPython (Join-Path $python 'python.exe') $lock
+# The official generator searches for python3 before python. Provide both names
+# so an activated terminal cannot fall through to a Windows Store alias.
+if (-not (Test-Path -LiteralPath (Join-Path $python 'python3.exe'))) {
+    Copy-Item -LiteralPath (Join-Path $python 'python.exe') -Destination (Join-Path $python 'python3.exe')
+}
+Assert-HpmPython (Join-Path $python 'python3.exe') $lock
+Set-Content -LiteralPath $pythonStamp -Value (Get-HpmPythonHash) -Encoding ASCII
 Invoke-HpmNative (Join-Path $python 'python.exe') @('-c', "import sys, yaml, jinja2, markupsafe; print('SDK Python:', sys.version.split()[0]); assert sys.flags.isolated")
 Invoke-HpmNative (Join-Path $toolchain 'bin/riscv32-unknown-elf-gcc.exe') @('-dumpfullversion')
 Set-Content -LiteralPath $stamp -Value (Get-HpmLockHash) -Encoding ASCII

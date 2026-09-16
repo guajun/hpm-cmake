@@ -1,15 +1,26 @@
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$Project,
-    [Parameter(Mandatory)][string]$BuildDirectory,
+    [string]$Project = '.',
+    [string]$BuildDirectory,
+    [string]$SdkRoot,
+    [string]$ToolchainRoot,
+    [string]$SdkEnvRoot,
     [string]$Version = 'latest',
-    [string]$SdkRevision
+    [string]$SdkRevision,
+    [switch]$NonInteractive,
+    [ValidateSet('en','zh')][string]$Language = 'en'
 )
 $ErrorActionPreference = 'Stop'
 $repository = 'guajun/hpm-cmake'
-$projectPath = (Resolve-Path -LiteralPath $Project).Path
-$buildPath = (Resolve-Path -LiteralPath $BuildDirectory).Path
+$projectPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Project)
+if (-not (Test-Path -LiteralPath (Join-Path $projectPath 'CMakeLists.txt'))) {
+    if ($NonInteractive) { throw 'Missing application path. Supply -Project pointing to its CMakeLists.txt directory. NonInteractive never prompts.' }
+    $answer = Read-Host 'Application source directory (-Project; contains CMakeLists.txt)'
+    if (-not $answer) { throw 'Missing -Project.' }
+    $projectPath = (Resolve-Path -LiteralPath $answer).Path
+    if (-not (Test-Path -LiteralPath (Join-Path $projectPath 'CMakeLists.txt'))) { throw 'Project must contain CMakeLists.txt.' }
+}
 if ($Version -eq 'latest') {
     $release = Invoke-RestMethod "https://api.github.com/repos/$repository/releases/latest"
     $Version = $release.tag_name
@@ -29,8 +40,8 @@ try {
         throw 'Release archive checksum verification failed.'
     }
     Expand-Archive -LiteralPath $archive -DestinationPath $staging
-    $entry = Join-Path $staging 'hpm-cmake/hpm-cmake.ps1'
-    & $entry import -Project $projectPath -BuildDirectory $buildPath -SdkRevision $SdkRevision
+    $entry = Join-Path $staging 'hpm-cmake/scripts/setup.ps1'
+    & $entry -Project $projectPath -BuildDirectory $BuildDirectory -SdkRoot $SdkRoot -ToolchainRoot $ToolchainRoot -SdkEnvRoot $SdkEnvRoot -SdkRevision $SdkRevision -NonInteractive:$NonInteractive -Language $Language
     Write-Host "Installed hpm-cmake $Version into the existing application."
 } finally {
     # Only delete the unique staging directory created inside this application.

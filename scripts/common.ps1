@@ -19,6 +19,58 @@ function Get-HpmSdkChanges {
     $changes | Where-Object { $_ -notmatch '^\?\? (?:.*/)?__pycache__/[^/]+\.pyc$' }
 }
 
+function Get-HpmLocalBinding {
+    $file = Join-Path $script:PrivateRoot 'local.json'
+    if (Test-Path -LiteralPath $file) { return (Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json) }
+    return $null
+}
+
+function Assert-HpmSdk {
+    param([string]$Sdk, $Lock)
+    if (Test-Path -LiteralPath (Join-Path $Sdk '.git')) {
+        $head = & git -C $Sdk rev-parse HEAD
+        if ($LASTEXITCODE -ne 0 -or $head -ne $Lock.sdk.commit) { throw 'SDK commit differs from hpm-lock.json.' }
+        if (@(Get-HpmSdkChanges $Sdk).Count) { throw 'SDK has source changes. Preserve them before synchronizing.' }
+    } else {
+        $binding = Get-HpmLocalBinding
+        if (-not $binding -or $binding.sdkSourceKind -ne 'archive' -or $binding.sdkCommit -ne $Lock.sdk.commit) {
+            throw 'SDK without Git metadata needs an explicit archive revision recorded by the installer.'
+        }
+        if ((Get-FileHash -LiteralPath (Join-Path $Sdk 'VERSION')).Hash -ne $binding.sdkVersionSha256) {
+            throw 'Bound SDK VERSION changed; review the dependency lock and reinstall the binding.'
+        }
+    }
+}
+
+function Assert-HpmCompiler {
+    param([string]$Compiler, $Lock)
+    $version = & $Compiler -dumpfullversion
+    if ($LASTEXITCODE -ne 0 -or $version -ne $Lock.toolchain.version) { throw 'Compiler version differs from lock.' }
+    if ($Lock.toolchain.PSObject.Properties.Name -contains 'executableSha256' -and
+        (Get-FileHash -LiteralPath $Compiler -Algorithm SHA256).Hash -ne $Lock.toolchain.executableSha256) {
+        throw 'Compiler executable differs from the official locked HPM package.'
+    }
+}
+
+function Assert-HpmPython {
+    param([string]$Python, $Lock)
+    $code = "import json,sys,importlib.metadata as m; print(json.dumps({'version':sys.version.split()[0],'isolated':sys.flags.isolated,'packages':{p:m.version(p) for p in ['PyYAML','Jinja2','MarkupSafe']}}))"
+    $details = & $Python -c $code
+    if ($LASTEXITCODE -ne 0) { throw 'SDK Python failed.' }
+    $details = $details | ConvertFrom-Json
+    if ($details.version -ne $Lock.python.version -or $details.isolated -ne 1) { throw 'SDK Python version or isolation differs from lock.' }
+    foreach ($package in $Lock.python.packages) {
+        if ($details.packages.($package.name) -ne $package.version) { throw "Python package mismatch: $($package.name)" }
+    }
+}
+
+function Get-HpmPythonHash {
+    $bytes = [Text.Encoding]::UTF8.GetBytes(((Get-HpmLock).python | ConvertTo-Json -Depth 10 -Compress))
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($algorithm.ComputeHash($bytes))).Replace('-','').ToLowerInvariant() }
+    finally { $algorithm.Dispose() }
+}
+
 function Invoke-HpmNative {
     param([string]$Executable, [string[]]$Arguments)
     & $Executable @Arguments

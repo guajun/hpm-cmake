@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Path $output -Force | Out-Null
 $stage = Join-Path $output ([Guid]::NewGuid().ToString('N'))
 $payload = Join-Path $stage 'hpm-cmake'
 New-Item -ItemType Directory -Path $payload -Force | Out-Null
-foreach ($name in @('hpm-cmake.ps1','hpm-lock.json','VERSION','README.md','LICENSE','scripts','cmake','install')) {
+foreach ($name in @('hpm-cmake.ps1','hpm-lock.json','VERSION','README.md','README.zh-CN.md','LICENSE','scripts','cmake','install','templates')) {
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $payload -Recurse
 }
 $archive = Join-Path $output 'hpm-cmake.zip'
