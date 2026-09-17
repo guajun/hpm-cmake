@@ -1,4 +1,4 @@
-name: Firmware environment
+name: Shell activation
 on:
   push:
   pull_request:
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  build:
+  test:
     strategy:
       fail-fast: false
       matrix:
@@ -14,9 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Maintainer-provided test SDK and tools
-        run: python tests/prepare.py
-      - name: Local-only integration and native build
+      - name: Local installation and shell activation
         run: python tests/integration.py
-      - name: Verify website command generation
+      - name: Website command generation
         run: node tests/command.test.cjs

@@ -1,77 +1,61 @@
-# hpm-cmake
+# hpm-venv
 
-[English](README.md) | [中文](README.zh-CN.md) · [一行安装与参数生成器](https://guajun.github.io/hpm-cmake/)
+[English](README.md) | [中文](README.zh-CN.md) · [一行安装](https://guajun.github.io/hpm-venv/)
 
-轻量的 HPM 固件项目**本地激活与 CMake 接入**。官方工具负责初始化应用和 BSP；SDK、编译器、Python 及依赖包的获取与版本，由项目维护者或其他工具负责。
+**只负责在当前 shell 激活已有的 HPM SDK 工具。**
 
-本项目不解析依赖、不安装工具链、不生成 lock、不恢复版本，生成的文件也无需上传 Git。
+生成本地激活脚本，指向当前机器上已安装的 SDK、GNU GCC 和 Python。这里的 venv 指本地 shell 环境，不创建 Python 虚拟环境、不下载依赖、不管理版本。
 
-## 本地安装
+## 安装，然后激活
 
-先按[官方流程](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)准备工具和工程，并生成官方 CMake 构建目录。在固件源码目录运行：
+在项目目录运行。空目录也可以，不需要 CMake 工程或已经生成的构建目录。
 
 **PowerShell**
 
 ```powershell
-& ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) -Project . -Language zh
+& ([scriptblock]::Create((irm https://github.com/guajun/hpm-venv/releases/latest/download/install.ps1))) -Project . -Language zh
+.\.hpm-venv\activate.ps1
 ```
 
 **Bash**
 
 ```bash
-bash <(curl -fsSL https://github.com/guajun/hpm-cmake/releases/latest/download/install.sh) --project . --language zh
+bash <(curl -fsSL https://github.com/guajun/hpm-venv/releases/latest/download/install.sh) --project . --language zh
+source .hpm-venv/activate.sh
 ```
 
-仅下载并校验轻量封装 release。SDK/GCC/Python 使用已有安装，路径从显式参数、官方 CMakeCache、本机配置或当前环境读取；缺项/歧义时交互询问。所选 Python 应已具备 SDK 所需依赖（包括 PyYAML、Jinja2），本工具不替用户安装这些包。
+激活后直接使用官方工程生成器和构建命令。hpm-venv 不生成 Presets、不导入 CMakeCache、不改 CMake 文件、不选择板卡或修改链接参数。工程配置、SDK/工具版本及兼容性由维护者负责。
 
-安装后：
+激活设置 `HPM_SDK_BASE`、`GNURISCV_TOOLCHAIN_PATH`、`HPM_SDK_TOOLCHAIN_VARIANT=gcc`，并将所选 GCC/Python 命令放到当前 `PATH` 前部。小型本地 python/python3 启动脚本确保选中正确的解释器。仅影响当前 shell。
 
-```powershell
-.\.hpm\activate.ps1
-cmake --preset hpm
-cmake --build --preset hpm --parallel
-```
+PowerShell 用 `.\.hpm-venv\activate.ps1 -Deactivate` 退出；Bash 用 `hpm_deactivate`。重复激活不会累积 PATH 项。
 
-Bash 用 `source .hpm/activate.sh` 激活。只影响当前 shell；PowerShell 用 `-Deactivate`，Bash 用 `hpm_deactivate` 恢复环境。安装完成后，也可直接运行 CMake preset。
+## 路径与非交互参数
 
-## 所有生成文件都留在本机
+路径选择顺序：显式参数、上次本机设置、当前环境变量、可选官方 sdk_env 目录、PATH 上可用命令。缺项交互询问；`-NonInteractive` / `--non-interactive` 直接报错，不等待输入。
 
-| 输出 | 用途 |
-| --- | --- |
-| `.hpm/local.json` | 当前机器的工具路径、导入的构建设置 |
-| `.hpm/presets.json`、`.hpm/cmake/` | 本地 CMake 配置及路径兼容处理 |
-| `.hpm/activate.ps1`、`.hpm/activate.sh` | 当前 shell 激活脚本 |
-| `.hpm/build/` | 固件构建结果 |
-| `CMakeUserPresets.json` | 接入本地 hpm preset，保留其他个人 preset |
-
-**这些文件都不需要提交。** 原始源码、BSP、维护者的 `CMakePresets.json` 和 `.gitignore` 不改动。已有 Git 仓库通过 `.git/info/exclude` 写入本地忽略规则；`.hpm/` 自带忽略文件。如果安装后才执行 git init，请在暂存文件前再运行一次安装器，补齐本地忽略规则。
-
-换机器后，先准备维护者选定的工具和官方构建配置，再运行同一条安装命令生成本机设置。同机器重复安装可复用已有本地配置；传入 BuildDirectory 则显式重新导入官方配置。此流程不承担可重复构建或环境版本恢复的保证。
-
-## 参数与 agent 使用
-
-[双语网页](https://guajun.github.io/hpm-cmake/#paths)可以填写参数并复制完整非交互命令。
-
-| PowerShell | Bash | 含义 |
+| PowerShell | Bash | 内容 |
 | --- | --- | --- |
-| `-Project <路径>` | `--project <路径>` | 包含 CMakeLists.txt 的源码目录，默认当前目录 |
-| `-BuildDirectory <路径>` | `--build-directory <路径>` | 官方 CMakeCache 所在目录，相对 Project 解析；唯一匹配项自动识别 |
-| `-SdkRoot <路径>` | `--sdk-root <路径>` | 已安装 SDK 根目录，包含 cmake/hpm-sdk-config.cmake |
-| `-ToolchainRoot <路径>` | `--toolchain-root <路径>` | 已安装 GNU GCC 根目录，包含 bin/riscv32-unknown-elf-gcc[.exe] |
-| `-PythonExecutable <文件>` | `--python-executable <文件>` | 已准备好 SDK 依赖的 Python 可执行文件 |
-| `-Version v0.4.0` | `--version v0.4.0` | 可选的封装 release 版本，默认 latest，不是依赖锁定 |
-| `-NonInteractive` | `--non-interactive` | 不等待输入，缺项立即报错 |
+| `-Project` | `--project` | 已存在的工作目录，默认 `.` |
+| `-SdkEnvRoot` | `--sdk-env-root` | 可选官方 sdk_env 目录，包含 hpm_sdk、toolchains |
+| `-SdkRoot` | `--sdk-root` | SDK 根目录，包含 cmake/hpm-sdk-config.cmake |
+| `-ToolchainRoot` | `--toolchain-root` | GNU GCC 根目录，包含 bin/riscv32-unknown-elf-gcc[.exe] |
+| `-PythonExecutable` | `--python-executable` | 已安装的 Python 可执行文件 |
+| `-Version` | `--version` | 要下载的封装 release，默认 latest |
+| `-NonInteractive` | `--non-interactive` | 不进行交互询问 |
 
-例如，在 PowerShell 一行安装命令后追加 `-BuildDirectory 'hpm6e00evk_build' -SdkRoot 'C:\sdk\hpm_sdk' -ToolchainRoot 'C:\tools\hpm-gcc' -PythonExecutable 'C:\sdk\python\python.exe' -NonInteractive`。Bash 使用对应的双横线参数和 Linux 路径。不强制指定某一版 SDK/GCC，也不按预设版本清单校验它们。
+[双语网页生成器](https://guajun.github.io/hpm-venv/#paths)可以填写路径，复制适用于 PowerShell/Bash 的完整一行命令。agent 建议显式填写 SDK、GCC、Python，避免发现路径时存在歧义。
 
-前置条件：Windows/PowerShell 5.1+ 或 Linux/Bash、已有 Python 3.9+ 及 SDK 所需包、CMake 3.24+、Ninja。Git 可选，仅用于本地忽略规则。不改全局环境或 shell 启动文件。
+生成器使用已有的 Python 3.9+；Windows 支持 PowerShell 5.1+，Linux 使用 Bash 与 curl。安装 hpm-venv 不需要 CMake、Ninja 或 Git。SDK 的 Python 依赖包按[厂商指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)自行准备。
 
-## 旧版文件
+## 全部留在本机
 
-v0.3 引入的版本管理职责已移除。之前生成的 `hpm-lock.json`、根目录 `CMakePresets.json` 和 `.hpm-cmake/` 不由 v0.4 使用。请维护者从固件仓库中移除确认属于旧封装的生成文件，保留项目自己维护的配置，然后重新接入官方构建目录。安装器不会自动删除或重新解释旧 lock。
+只创建 `.hpm-venv/`：包含 `settings.json`、当前系统的激活脚本、Python 命令启动脚本和内部 `.gitignore`。无需提交任何生成文件；不读取或修改源码、CMake/Presets、仓库忽略规则。换机器时，用该机器的已有路径重新安装。
 
-测试独立准备官方 SDK/工具作为夹具，验证 Windows/Linux 构建、重复安装、跟踪文件不变、个人 Presets 保留及激活恢复。release 不附带测试 SDK、固件 example、烧录或调试代码。
+仓库原名 `hpm-cmake`，早期版本生成过本地 CMake 配置；hpm-venv 不使用这些文件。维护者可在确认不再需要时清理旧 `.hpm/`、`.hpm-cmake/`、生成的 UserPresets 或 lock，保留项目自己维护的配置。安装器不代做清理。
 
-[官方安装指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html) · [官方生成器](https://github.com/hpmicro/sdk_env) · [原生 CMake](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html) · [GCC 下载](https://github.com/hpmicro/riscv-gnu-toolchain/releases)
+测试覆盖空目录安装、路径传参/环境变量、原工程文件保留、命令选择、重复激活与退出恢复，支持 Windows 和 Linux。无固件 example、构建封装、调试器或探针代码。
 
-MIT License。参考 [wch-cmake](https://guajun.github.io/wch-cmake/) 的轻量脚本工作流。
+[HPM SDK](https://github.com/hpmicro/hpm_sdk) · [官方 sdk_env](https://github.com/hpmicro/sdk_env) · [厂商安装指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)
+
+MIT License。

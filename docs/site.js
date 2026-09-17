@@ -1,6 +1,6 @@
 'use strict';
 let language=navigator.language.startsWith('zh')?'zh':'en';
-try{language=localStorage.getItem('hpm-cmake-language')||language;}catch{}
+try{language=localStorage.getItem('hpm-venv-language')||language;}catch{}
 const translations=Array.from(document.querySelectorAll('[data-zh]'),element=>({element,en:element.textContent,zh:element.dataset.zh}));
 function render(){
  const shell=document.getElementById('shell').value;
@@ -10,14 +10,14 @@ function render(){
  document.getElementById('lang-zh').setAttribute('aria-pressed',language==='zh');
  document.getElementById('shell-label').textContent=shell==='bash'?'Bash':'PowerShell';
  document.getElementById('quick-command').textContent=HpmCommand.build({Project:'.'},language,shell).replace(/ -NonInteractive$| --non-interactive$/,'');
- document.getElementById('build-command').textContent=(shell==='bash'?'source .hpm/activate.sh':'.\\.hpm\\activate.ps1')+'\ncmake --preset hpm\ncmake --build --preset hpm --parallel';
- document.getElementById('readme-link').href=language==='zh'?'https://github.com/guajun/hpm-cmake/blob/main/README.zh-CN.md':'https://github.com/guajun/hpm-cmake#readme';
+ document.getElementById('build-command').textContent=(shell==='bash'?'source .hpm-venv/activate.sh':'.\\.hpm-venv\\activate.ps1')+'\n'+(shell==='bash'?'# Exit: hpm_deactivate':'# Exit: .\\.hpm-venv\\activate.ps1 -Deactivate');
+ document.getElementById('readme-link').href=language==='zh'?'https://github.com/guajun/hpm-venv/blob/main/README.zh-CN.md':'https://github.com/guajun/hpm-venv#readme';
  const values=Object.fromEntries(HpmCommand.fields.map(key=>[key,document.getElementById(key).value]));
  try{document.getElementById('generated-command').textContent=HpmCommand.build(values,language,shell);document.getElementById('copy-generated').disabled=false;document.getElementById('command-error').textContent='';}
  catch{document.getElementById('generated-command').textContent='';document.getElementById('copy-generated').disabled=true;document.getElementById('command-error').textContent=language==='zh'?'请输入单行参数值。':'Use single-line values.';}
- document.getElementById('agent-command').textContent=HpmCommand.build({Project:shell==='bash'?'/work/firmware':'C:\\firmware',BuildDirectory:'hpm6e00evk_build',PythonExecutable:shell==='bash'?'/opt/sdk-python/bin/python':'C:\\sdk\\python\\python.exe'},language,shell);
+ document.getElementById('agent-command').textContent=HpmCommand.build({Project:shell==='bash'?'/work/firmware':'C:\\firmware',SdkRoot:shell==='bash'?'/opt/hpm_sdk':'C:\\sdk\\hpm_sdk',ToolchainRoot:shell==='bash'?'/opt/hpm-gcc':'C:\\tools\\hpm-gcc',PythonExecutable:shell==='bash'?'/opt/sdk-python/bin/python':'C:\\sdk\\python\\python.exe'},language,shell);
 }
-for(const lang of ['en','zh'])document.getElementById('lang-'+lang).addEventListener('click',()=>{language=lang;try{localStorage.setItem('hpm-cmake-language',lang);}catch{}render();});
+for(const lang of ['en','zh'])document.getElementById('lang-'+lang).addEventListener('click',()=>{language=lang;try{localStorage.setItem('hpm-venv-language',lang);}catch{}render();});
 document.getElementById('shell').addEventListener('change',render);
 document.getElementById('command-form').addEventListener('input',render);
 document.getElementById('command-form').addEventListener('submit',event=>event.preventDefault());

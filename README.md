@@ -1,77 +1,61 @@
-# hpm-cmake
+# hpm-venv
 
-[English](README.md) | [中文](README.zh-CN.md) · [One-line installer](https://guajun.github.io/hpm-cmake/)
+[English](README.md) | [中文](README.zh-CN.md) · [One-line installer](https://guajun.github.io/hpm-venv/)
 
-Lightweight, **local-only** activation and CMake integration for existing HPM firmware projects. Official HPM tools initialize the application and BSP. The project maintainer (or another tool) supplies and versions the SDK, compiler, Python and Python packages.
+**Activate existing HPM SDK tools in the current shell.** That is the whole job.
 
-hpm-cmake does not resolve dependencies, install toolchains, write a dependency lock, restore versions or require generated files in Git.
+`hpm-venv` generates local activation scripts pointing to the SDK, GNU GCC and Python already installed on your machine. The name describes a local shell environment; it does not create a Python virtual environment, download dependencies or manage versions.
 
-## Install locally
+## Install, then activate
 
-First prepare the official application and generate its CMake build directory, using the [vendor workflow](https://hpm-sdk.readthedocs.io/en/latest/get_started.html). In the firmware source folder:
+Run in your project directory. An empty directory works too; no CMake project or generated build is required.
 
 **PowerShell**
 
 ```powershell
-& ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) -Project .
+& ([scriptblock]::Create((irm https://github.com/guajun/hpm-venv/releases/latest/download/install.ps1))) -Project .
+.\.hpm-venv\activate.ps1
 ```
 
 **Bash**
 
 ```bash
-bash <(curl -fsSL https://github.com/guajun/hpm-cmake/releases/latest/download/install.sh) --project .
+bash <(curl -fsSL https://github.com/guajun/hpm-venv/releases/latest/download/install.sh) --project .
+source .hpm-venv/activate.sh
 ```
 
-Only the small wrapper release is downloaded and checksum-verified. Existing SDK/GCC/Python paths come from explicit arguments, the official `CMakeCache.txt`, local settings or the current environment. Missing/ambiguous paths are requested interactively. The selected Python must already have the SDK's dependencies (including PyYAML and Jinja2).
+Use the official HPM generator and build commands afterward. hpm-venv does not generate Presets, import CMakeCache, edit CMake files, select boards, or change linker options. Application configuration, SDK/tool versions and compatibility are the maintainer's responsibility.
 
-After installation:
+Activation sets `HPM_SDK_BASE`, `GNURISCV_TOOLCHAIN_PATH`, `HPM_SDK_TOOLCHAIN_VARIANT=gcc`, and prepends the selected GCC/Python commands to `PATH`. Small local `python`/`python3` launchers select the supplied interpreter consistently. Only the current shell is affected.
 
-```powershell
-.\.hpm\activate.ps1
-cmake --preset hpm
-cmake --build --preset hpm --parallel
-```
+Exit with `.\.hpm-venv\activate.ps1 -Deactivate` on PowerShell or `hpm_deactivate` on Bash. Repeated activation does not accumulate PATH entries.
 
-On Bash use `source .hpm/activate.sh`. Activation is optional for the CMake preset, and changes only the current shell. Restore it with `-Deactivate` on PowerShell or `hpm_deactivate` on Bash.
+## Existing paths, explicit arguments
 
-## Everything generated stays local
+The installer uses explicit paths first, then previous local settings, current environment variables, the optional official sdk_env root, and available commands on PATH. Missing paths are requested interactively; `-NonInteractive` / `--non-interactive` fails without waiting.
 
-| Output | Purpose |
-| --- | --- |
-| `.hpm/local.json` | Current machine's tool paths and imported build settings |
-| `.hpm/presets.json`, `.hpm/cmake/` | Local CMake configuration and path compatibility helpers |
-| `.hpm/activate.ps1`, `.hpm/activate.sh` | Current-shell activation |
-| `.hpm/build/` | Firmware build output |
-| `CMakeUserPresets.json` | Includes the local `hpm` preset, preserving other personal presets |
-
-**None of these outputs needs to be committed.** Application source, BSP, maintainer-owned `CMakePresets.json` and `.gitignore` are left unchanged. In an existing Git repository, the installer adds local ignore rules to `.git/info/exclude`; `.hpm/` also contains its own ignore file. If you initialize Git afterward, rerun the installer to add the local exclude rules before staging files.
-
-Each machine needs the tool versions and official build configuration supplied by the maintainer. Run the same one-line installer there to generate its local settings. Re-running on the same machine reuses local build settings; `-BuildDirectory` / `--build-directory` explicitly reimports a new official configuration. This workflow does not promise reproducible builds or automatic environment recovery.
-
-## Parameters for users and agents
-
-The [bilingual web form](https://guajun.github.io/hpm-cmake/#paths) generates quoted, non-interactive commands for either shell.
-
-| PowerShell | Bash | Meaning |
+| PowerShell | Bash | Value |
 | --- | --- | --- |
-| `-Project <path>` | `--project <path>` | Source directory containing CMakeLists.txt; default `.` |
-| `-BuildDirectory <path>` | `--build-directory <path>` | Official CMakeCache directory, relative to Project; a unique matching build is detected |
-| `-SdkRoot <path>` | `--sdk-root <path>` | Existing SDK root containing `cmake/hpm-sdk-config.cmake` |
-| `-ToolchainRoot <path>` | `--toolchain-root <path>` | Existing GNU GCC root containing `bin/riscv32-unknown-elf-gcc[.exe]` |
-| `-PythonExecutable <file>` | `--python-executable <file>` | Existing SDK Python executable, including its installed SDK packages |
-| `-Version v0.4.0` | `--version v0.4.0` | Optional wrapper release selection; defaults to latest, not a dependency lock |
-| `-NonInteractive` | `--non-interactive` | Never prompt; missing information fails immediately |
+| `-Project` | `--project` | Existing working directory, default `.` |
+| `-SdkEnvRoot` | `--sdk-env-root` | Optional official sdk_env directory containing hpm_sdk and toolchains |
+| `-SdkRoot` | `--sdk-root` | SDK root containing cmake/hpm-sdk-config.cmake |
+| `-ToolchainRoot` | `--toolchain-root` | GNU GCC root containing bin/riscv32-unknown-elf-gcc[.exe] |
+| `-PythonExecutable` | `--python-executable` | Existing Python executable |
+| `-Version` | `--version` | Wrapper release to download, default latest |
+| `-NonInteractive` | `--non-interactive` | Never prompt |
 
-For example, append `-BuildDirectory 'hpm6e00evk_build' -SdkRoot 'C:\sdk\hpm_sdk' -ToolchainRoot 'C:\tools\hpm-gcc' -PythonExecutable 'C:\sdk\python\python.exe' -NonInteractive` to the PowerShell installer command. The Bash form uses the corresponding `--` options and POSIX paths. Existing GCC/SDK versions are not pinned or checked against a bundled release list.
+The [bilingual command builder](https://guajun.github.io/hpm-venv/#paths) produces a complete quoted one-line command for either shell. For agents, provide SDK/GCC/Python paths explicitly to avoid discovery ambiguity.
 
-Requirements: Windows/PowerShell 5.1+ or Linux/Bash, existing Python 3.9+ with the SDK packages, CMake 3.24+ and Ninja. Git is optional and used only for local ignore rules. No global environment or shell startup files are changed.
+An existing Python 3.9+ runs this small generator. Windows supports PowerShell 5.1+; Linux uses Bash and curl. CMake, Ninja and Git are not installation prerequisites for hpm-venv. Prepare the SDK's Python packages separately according to the [vendor guide](https://hpm-sdk.readthedocs.io/en/latest/get_started.html).
 
-## Earlier releases
+## Local files only
 
-The version-management scope introduced in v0.3 has been removed. `hpm-lock.json`, generated root `CMakePresets.json` and `.hpm-cmake/` from those releases are not used by v0.4. Maintainers should remove files known to have been generated by the older wrapper from their firmware repository, preserving any project-owned configuration. Then import the official build locally. v0.4 does not automatically delete or reinterpret an old lock.
+Only `.hpm-venv/` is created: `settings.json`, the host's activation script, Python command launchers, and an internal `.gitignore`. Nothing needs to be committed. Source, CMake/Presets files and repository ignore rules are not read or modified. Each machine runs the installer with its own existing paths.
 
-Tests use independently maintained vendor fixtures to verify Windows/Linux compilation, repeated setup, untouched tracked files, preservation of personal presets, and shell activation. The wrapper release contains no test SDK, firmware example, flashing or debugging code.
+This repository was previously named `hpm-cmake`. Earlier releases generated local CMake configuration; hpm-venv does not use those files. Maintainers can remove known old generated `.hpm/`, `.hpm-cmake/`, UserPresets or lock files when no longer needed, preserving project-owned configuration. The installer does not perform that cleanup.
 
-[Official SDK setup](https://hpm-sdk.readthedocs.io/en/latest/get_started.html) · [Official generator](https://github.com/hpmicro/sdk_env) · [Native CMake](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html) · [GCC downloads](https://github.com/hpmicro/riscv-gnu-toolchain/releases)
+Tests cover installing in an empty directory, explicit/environment paths, existing project-file preservation, command selection, repeated activation and restoration on Windows and Linux. There is no firmware example, build-system wrapper, debugger or probe code.
 
-MIT licensed. Inspired by the small-script workflow of [wch-cmake](https://guajun.github.io/wch-cmake/).
+[HPM SDK](https://github.com/hpmicro/hpm_sdk) · [Official sdk_env](https://github.com/hpmicro/sdk_env) · [Vendor setup guide](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)
+
+MIT License.

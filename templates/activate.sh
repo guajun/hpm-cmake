@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Source this generated file; it affects only the current shell.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  echo 'Use: source .hpm/activate.sh' >&2; exit 1
+  echo 'Use: source .hpm-venv/activate.sh' >&2; exit 1
+fi
+if [[ ${1:-} != --deactivate ]] && [[ ! -f @SDK@/cmake/hpm-sdk-config.cmake || ! -f @GCC@/bin/riscv32-unknown-elf-gcc || ! -f @PYTHON@ ]]; then
+  echo 'Local tools missing. Rerun the installer.' >&2; return 1
 fi
 hpm_deactivate() {
   local name
@@ -29,6 +32,6 @@ fi
 export HPM_SDK_BASE=@SDK@
 export GNURISCV_TOOLCHAIN_PATH=@GCC@
 export HPM_SDK_TOOLCHAIN_VARIANT=gcc
-export PATH=@PYTHON_BIN@:"$GNURISCV_TOOLCHAIN_PATH/bin:$PATH"
+export PATH=@PROJECT@/.hpm-venv/bin:@PYTHON_BIN@:"$GNURISCV_TOOLCHAIN_PATH/bin:$PATH"
 unset _hpm_name
 printf 'Activated firmware environment: %s\n' @PROJECT@
