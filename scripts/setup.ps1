@@ -1,32 +1,37 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param([string]$Project='.',[string]$BuildDirectory,[string]$SdkRoot,[string]$ToolchainRoot,[string]$SdkEnvRoot,[string]$SdkRevision,[switch]$NonInteractive,[ValidateSet('en','zh')][string]$Language='en')
+param([string]$Project='.',[string]$BuildDirectory,[string]$SdkRoot,[string]$ToolchainRoot,[string]$PythonExecutable,[string]$SdkEnvRoot,[switch]$NonInteractive,[ValidateSet('en','zh')][string]$Language='en')
 $ErrorActionPreference='Stop'
 $repository=Split-Path -Parent $PSScriptRoot
 $projectPath=(Resolve-Path -LiteralPath $Project).Path
-if (-not (Test-Path -LiteralPath (Join-Path $projectPath 'CMakeLists.txt'))) { throw 'Project must contain CMakeLists.txt.' }
-$lockPath=Join-Path $projectPath 'hpm-lock.json'
-$lock=Get-Content -LiteralPath $(if (Test-Path $lockPath) {$lockPath} else {Join-Path $repository 'hpm-lock.json'}) -Raw -Encoding UTF8|ConvertFrom-Json
-$python=if ($lock.schema -eq 1) {$lock.python} else {$lock.platforms.'windows-x86_64'.python}
-$private=Join-Path $projectPath '.hpm'
-$runtime=Join-Path $private 'python'
-$executable=Join-Path $runtime 'python.exe'
-if (-not (Test-Path -LiteralPath $executable)) {
- $downloads=Join-Path $private 'downloads'
- New-Item -ItemType Directory -Path $downloads -Force|Out-Null
- $archive=Join-Path $downloads ($python.sha256.Substring(0,12)+'-'+[IO.Path]::GetFileName(([Uri]$python.url).AbsolutePath))
- if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing $python.url -OutFile $archive }
- if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $python.sha256) {throw 'Python archive checksum mismatch.'}
- Expand-Archive -LiteralPath $archive -DestinationPath $runtime
+$candidates=@($PythonExecutable)
+if ($BuildDirectory) {
+ $build=if([IO.Path]::IsPathRooted($BuildDirectory)){$BuildDirectory}else{Join-Path $projectPath $BuildDirectory}
+ $cache=Join-Path $build 'CMakeCache.txt'
+ if(Test-Path -LiteralPath $cache){foreach($line in Get-Content -LiteralPath $cache){if($line -match '^python_exec:[^=]+=(.*)$'){$candidates+=$Matches[1]}}}
 }
-$version=& $executable -I -c 'import platform; print(platform.python_version())'
-if ($LASTEXITCODE -ne 0 -or $version -ne $python.version) {throw 'Private Python runtime differs from lock.'}
-if ($SdkEnvRoot) {
- if (-not $SdkRoot) {$SdkRoot=Join-Path $SdkEnvRoot 'hpm_sdk'}
- if (-not $ToolchainRoot) {$ToolchainRoot=Join-Path $SdkEnvRoot 'toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win'}
+$localFile=Join-Path $projectPath '.hpm/local.json'
+if(Test-Path -LiteralPath $localFile){$local=Get-Content -LiteralPath $localFile -Raw -Encoding UTF8|ConvertFrom-Json;$candidates+=$local.python}
+if($SdkEnvRoot){
+ if(-not $SdkRoot){$SdkRoot=Join-Path $SdkEnvRoot 'hpm_sdk'}
+ if(-not $ToolchainRoot){$ToolchainRoot=Join-Path $SdkEnvRoot 'toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win'}
+ $candidates+=Join-Path $SdkEnvRoot 'tools/python3/python.exe'
 }
-$arguments=@('-I',(Join-Path $repository 'scripts/hpm.py'),'--project',$projectPath,'--language',$Language)
-foreach ($pair in @(@('build-directory',$BuildDirectory),@('sdk-root',$SdkRoot),@('toolchain-root',$ToolchainRoot),@('sdk-revision',$SdkRevision))) {if ($pair[1]) {$arguments+=@("--$($pair[0])",$pair[1])}}
-if ($NonInteractive) {$arguments+='--non-interactive'}
-& $executable @arguments
-if ($LASTEXITCODE -ne 0) {throw "HPM environment setup failed ($LASTEXITCODE)."}
+foreach($name in @('python.exe','python3.exe')){$command=Get-Command $name -CommandType Application -ErrorAction SilentlyContinue|Select-Object -First 1;if($command -and $command.Source -notmatch 'WindowsApps'){$candidates+=$command.Source}}
+$runner=$null
+foreach($candidate in $candidates){
+ if($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)){
+  & $candidate -c 'import sys; assert sys.version_info >= (3, 9)' 2>$null
+  if($LASTEXITCODE -eq 0){$runner=$candidate;break}
+ }
+ if($PythonExecutable -and $candidate -eq $PythonExecutable){throw 'Invalid -PythonExecutable. Provide an installed Python 3.9+ interpreter.'}
+}
+if(-not $runner){
+ if($NonInteractive){throw 'Provide -PythonExecutable pointing to the existing SDK Python 3.9+. No runtimes are installed automatically.'}
+ $runner=Read-Host 'SDK Python executable (-PythonExecutable)'
+}
+$arguments=@((Join-Path $repository 'scripts/hpm.py'),'--project',$projectPath,'--language',$Language)
+foreach($pair in @(@('build-directory',$BuildDirectory),@('sdk-root',$SdkRoot),@('toolchain-root',$ToolchainRoot),@('python-executable',$PythonExecutable))){if($pair[1]){$arguments+=@("--$($pair[0])",$pair[1])}}
+if($NonInteractive){$arguments+='--non-interactive'}
+& $runner @arguments
+if($LASTEXITCODE -ne 0){throw "HPM local setup failed ($LASTEXITCODE)."}

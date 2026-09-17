@@ -3,11 +3,6 @@
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   echo 'Use: source .hpm/activate.sh' >&2; exit 1
 fi
-_hpm_env_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-if [[ ${1:-} != --deactivate ]] && [[ $(sha256sum "$_hpm_env_dir/../hpm-lock.json" | cut -d' ' -f1) != $(cat "$_hpm_env_dir/synced-lock.sha256") ]]; then
-  echo 'Lock changed. Rerun the one-line installer.' >&2; unset _hpm_env_dir; return 1
-fi
-unset _hpm_env_dir
 hpm_deactivate() {
   local name
   for name in PATH HPM_SDK_BASE GNURISCV_TOOLCHAIN_PATH HPM_SDK_TOOLCHAIN_VARIANT; do

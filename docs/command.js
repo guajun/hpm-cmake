@@ -1,8 +1,8 @@
 (function (root) {
   'use strict';
   const installer = 'https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1';
-  const fields = ['Project', 'BuildDirectory', 'SdkRoot', 'ToolchainRoot', 'SdkRevision', 'Version'];
-  const bashNames = {Project:'project',BuildDirectory:'build-directory',SdkRoot:'sdk-root',ToolchainRoot:'toolchain-root',SdkRevision:'sdk-revision',Version:'version'};
+  const fields = ['Project', 'BuildDirectory', 'SdkRoot', 'ToolchainRoot', 'PythonExecutable', 'Version'];
+  const bashNames = {Project:'project',BuildDirectory:'build-directory',SdkRoot:'sdk-root',ToolchainRoot:'toolchain-root',PythonExecutable:'python-executable',Version:'version'};
   function quote(value, shell='powershell') {
     const text = String(value).trim();
     if (/[\r\n\0]/.test(text)) throw new Error('Use a single-line value.');

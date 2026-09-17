@@ -2,92 +2,76 @@
 
 [English](README.md) | [中文](README.zh-CN.md) · [一行安装与参数生成器](https://guajun.github.io/hpm-cmake/)
 
-聚焦 **HPM 固件开发**：官方工具初始化应用与 BSP，原生 CMake 构建；支持 Windows x64 与 Linux x86_64。
+轻量的 HPM 固件项目**本地激活与 CMake 接入**。官方工具负责初始化应用和 BSP；SDK、编译器、Python 及依赖包的获取与版本，由项目维护者或其他工具负责。
 
-## 每次 clone 后，都运行同一条命令
+本项目不解析依赖、不安装工具链、不生成 lock、不恢复版本，生成的文件也无需上传 Git。
 
-在固件源码目录运行：
+## 本地安装
 
-**Windows / PowerShell**
+先按[官方流程](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)准备工具和工程，并生成官方 CMake 构建目录。在固件源码目录运行：
+
+**PowerShell**
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) -Project . -Language zh
 ```
 
-**Linux / Bash**
+**Bash**
 
 ```bash
 bash <(curl -fsSL https://github.com/guajun/hpm-cmake/releases/latest/download/install.sh) --project . --language zh
 ```
 
-安装器自动区分两个阶段：
+仅下载并校验轻量封装 release。SDK/GCC/Python 使用已有安装，路径从显式参数、官方 CMakeCache、本机配置或当前环境读取；缺项/歧义时交互询问。所选 Python 应已具备 SDK 所需依赖（包括 PyYAML、Jinja2），本工具不替用户安装这些包。
 
-1. **首次接入，没有 lock：** 用官方 SDK 工具或官方 CMake 流程生成工程，读取其 `CMakeCache.txt`，记录 SDK commit、工具链及板卡/构建配置；保留原始应用源码与 `CMakeLists.txt`。
-2. **clone 固件仓库之后，已有 lock：** 同一条命令按 `hpm-lock.json` 重建当前机器的 `.hpm/`。不再需要原来的官方构建目录、生成器或安装路径；lock 与 Presets 不变。重复安装也不会因已有文件而失败。
-
-在需要工具命令的新终端里激活：
+安装后：
 
 ```powershell
 .\.hpm\activate.ps1
+cmake --preset hpm
+cmake --build --preset hpm --parallel
 ```
 
-```bash
-source .hpm/activate.sh
-```
+Bash 用 `source .hpm/activate.sh` 激活。只影响当前 shell；PowerShell 用 `-Deactivate`，Bash 用 `hpm_deactivate` 恢复环境。安装完成后，也可直接运行 CMake preset。
 
-然后执行 `cmake --preset default` 和 `cmake --build --preset default --parallel`。激活仅影响当前 shell；PowerShell 的 `-Deactivate` 或 Bash 的 `hpm_deactivate` 恢复之前的环境。安装完成后也可直接使用 CMake preset，无需先激活。
+## 所有生成文件都留在本机
 
-## Git 边界
-
-| 提交 Git | 不提交 Git |
+| 输出 | 用途 |
 | --- | --- |
-| 固件源码、BSP、CMakeLists.txt | `.hpm/`：下载依赖、私有 Python、本机路径、生成的 activate 和 CMake hook |
-| `CMakePresets.json`：可跨主机的板卡/构建配置 | `build/`：CMake 缓存与构建输出 |
-| `hpm-lock.json`：版本与各平台校验值 | 原机器的官方构建目录、CMakeUserPresets.json |
-| `.gitignore` | 机器环境变量 |
+| `.hpm/local.json` | 当前机器的工具路径、导入的构建设置 |
+| `.hpm/presets.json`、`.hpm/cmake/` | 本地 CMake 配置及路径兼容处理 |
+| `.hpm/activate.ps1`、`.hpm/activate.sh` | 当前 shell 激活脚本 |
+| `.hpm/build/` | 固件构建结果 |
+| `CMakeUserPresets.json` | 接入本地 hpm preset，保留其他个人 preset |
 
-**`.hpm/` 就是这里与 `.venv/` 等价的目录。** clone 到别的目录或机器后重新安装；本机路径写入 `.hpm/environment.json`，由已提交的 Presets 引用。删除 `.hpm/` 后可重建，lock 不保存机器绝对路径。
+**这些文件都不需要提交。** 原始源码、BSP、维护者的 `CMakePresets.json` 和 `.gitignore` 不改动。已有 Git 仓库通过 `.git/info/exclude` 写入本地忽略规则；`.hpm/` 自带忽略文件。如果安装后才执行 git init，请在暂存文件前再运行一次安装器，补齐本地忽略规则。
 
-## lock 锁定什么
+换机器后，先准备维护者选定的工具和官方构建配置，再运行同一条安装命令生成本机设置。同机器重复安装可复用已有本地配置；传入 BuildDirectory 则显式重新导入官方配置。此流程不承担可重复构建或环境版本恢复的保证。
 
-原来已有的 `hpm-lock.json` 现在升级为 schema 2，明确锁定：
+## 参数与 agent 使用
 
-- 封装 release 版本。已有 lock 时，一行命令中的 latest 按项目固定版本恢复；显式指定冲突版本会报错。
-- SDK 仓库与完整 commit。
-- Windows/Linux 官方 HPM GCC 13.2.0 的下载地址、压缩包 SHA-256、编译器可执行文件 SHA-256。
-- PyYAML 6.0.3、Jinja2 3.1.6、MarkupSafe 3.0.3 的固定版本及适配平台的 wheel 校验值。
-- Windows 私有 CPython 3.14.5；Linux 宿主 Python 支持范围 3.10–3.14。
-
-Linux 使用已安装的 Python 创建不带 pip 的项目 venv，再解压校验过的固定 wheel；宿主 Python 补丁版本不锁定，因此不声称主机运行环境逐字节相同。Windows 自动准备私有解释器。固件仍是 C/C++ 项目，无需 uv 或 Python 项目元数据。
-
-重新安装不会顺便升级依赖。升级需要明确修改 lock 并验证；自定义旧依赖配置不会被静默替换。
-
-## 参数与非交互运行
-
-网页中英双语填写区可生成完整命令，始终带 `-NonInteractive` / `--non-interactive`，供 agent 一次执行。
+[双语网页](https://guajun.github.io/hpm-cmake/#paths)可以填写参数并复制完整非交互命令。
 
 | PowerShell | Bash | 含义 |
 | --- | --- | --- |
-| `-Project <路径>` | `--project <路径>` | 固件源码目录，默认 `.` |
-| `-BuildDirectory <路径>` | `--build-directory <路径>` | 仅首次接入需要；包含官方 CMakeCache.txt，相对 Project 解析；唯一匹配项自动识别 |
-| `-SdkRoot <路径>` | `--sdk-root <路径>` | 可选的现有 SDK，须匹配 lock |
-| `-ToolchainRoot <路径>` | `--toolchain-root <路径>` | 可选的现有 GCC 根目录，校验版本与 hash |
-| `-SdkRevision <tag或commit>` | `--sdk-revision <tag或commit>` | 使用没有 Git 信息的官方 SDK 压缩包时，声明真实版本 |
-| `-Version v0.3.0` | `--version v0.3.0` | 封装版本；已有项目 lock 优先于 latest |
-| `-NonInteractive` | `--non-interactive` | 禁止等待输入；首次接入缺项或歧义直接报错 |
+| `-Project <路径>` | `--project <路径>` | 包含 CMakeLists.txt 的源码目录，默认当前目录 |
+| `-BuildDirectory <路径>` | `--build-directory <路径>` | 官方 CMakeCache 所在目录，相对 Project 解析；唯一匹配项自动识别 |
+| `-SdkRoot <路径>` | `--sdk-root <路径>` | 已安装 SDK 根目录，包含 cmake/hpm-sdk-config.cmake |
+| `-ToolchainRoot <路径>` | `--toolchain-root <路径>` | 已安装 GNU GCC 根目录，包含 bin/riscv32-unknown-elf-gcc[.exe] |
+| `-PythonExecutable <文件>` | `--python-executable <文件>` | 已准备好 SDK 依赖的 Python 可执行文件 |
+| `-Version v0.4.0` | `--version v0.4.0` | 可选的封装 release 版本，默认 latest，不是依赖锁定 |
+| `-NonInteractive` | `--non-interactive` | 不等待输入，缺项立即报错 |
 
-首次接入的路径优先级是显式参数、官方缓存、HPM_SDK_BASE / GNURISCV_TOOLCHAIN_PATH。恢复时优先使用显式路径或本机绑定，没有时按 lock 下载。旧电脑的本地文件不提交，所以不会传到新 clone。修改过的 SDK 或不匹配的 GCC 会被拒绝。
+例如，在 PowerShell 一行安装命令后追加 `-BuildDirectory 'hpm6e00evk_build' -SdkRoot 'C:\sdk\hpm_sdk' -ToolchainRoot 'C:\tools\hpm-gcc' -PythonExecutable 'C:\sdk\python\python.exe' -NonInteractive`。Bash 使用对应的双横线参数和 Linux 路径。不强制指定某一版 SDK/GCC，也不按预设版本清单校验它们。
 
-两端需要 Git、CMake 3.24+、Ninja。Linux 还需要 Bash、curl、Python 3.10–3.14（含 venv）；当前工具链包仅支持 Linux x86_64。安装器不安装系统包、不修改 shell profile 或全局环境。
+前置条件：Windows/PowerShell 5.1+ 或 Linux/Bash、已有 Python 3.9+ 及 SDK 所需包、CMake 3.24+、Ninja。Git 可选，仅用于本地忽略规则。不改全局环境或 shell 启动文件。
 
-## 从 v0.2 迁移
+## 旧版文件
 
-支持的 schema-1 lock 会迁移为 schema 2，保留 SDK commit 和 Windows 依赖版本；旧 lock 备份在 `.hpm/`。原应用源码不变。旧 `.hpm-cmake/` 和根目录 `activate.ps1` 不再使用，请从 Git 取消跟踪这些生成文件，改用 `.hpm/activate.ps1`。第一次迁移审阅并提交更新后的 lock 与 Presets；后续 clone 只需重新安装。
+v0.3 引入的版本管理职责已移除。之前生成的 `hpm-lock.json`、根目录 `CMakePresets.json` 和 `.hpm-cmake/` 不由 v0.4 使用。请维护者从固件仓库中移除确认属于旧封装的生成文件，保留项目自己维护的配置，然后重新接入官方构建目录。安装器不会自动删除或重新解释旧 lock。
 
-## 范围与验证
+测试独立准备官方 SDK/工具作为夹具，验证 Windows/Linux 构建、重复安装、跟踪文件不变、个人 Presets 保留及激活恢复。release 不附带测试 SDK、固件 example、烧录或调试代码。
 
-仓库不再提供固件 example、J-Link 或调试脚本。测试临时使用官方 SDK 的 hello_world，验证首次接入、构建、只提交源码/配置/lock、真实 git clone、无原构建缓存恢复、再次编译、重复安装及激活恢复。Windows、Ubuntu 22.04/24.04 在 CI 构建；不操作硬件。
+[官方安装指南](https://hpm-sdk.readthedocs.io/en/latest/get_started.html) · [官方生成器](https://github.com/hpmicro/sdk_env) · [原生 CMake](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html) · [GCC 下载](https://github.com/hpmicro/riscv-gnu-toolchain/releases)
 
-官方参考：[SDK 安装与 Linux 支持](https://hpm-sdk.readthedocs.io/en/latest/get_started.html)、[SDK 源码](https://github.com/hpmicro/hpm_sdk)、[GCC 发布](https://github.com/hpmicro/riscv-gnu-toolchain/releases/tag/2023.10.18)、[Python](https://www.python.org/downloads/release/python-3145/)。结构与流程参考 [wch-cmake](https://guajun.github.io/wch-cmake/)。
-
-封装采用 MIT License；下载的 SDK、工具链及运行依赖保留各自许可证，不打包进封装 release。
+MIT License。参考 [wch-cmake](https://guajun.github.io/wch-cmake/) 的轻量脚本工作流。

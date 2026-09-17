@@ -7,25 +7,15 @@ while (($#)); do
   case "$1" in
     --project) hpm_project=${2:?Missing project}; shift 2;;
     --version) hpm_version=${2:?Missing version}; shift 2;;
-    --build-directory|--sdk-root|--toolchain-root|--sdk-revision|--language) hpm_args+=("$1" "${2:?Missing value}"); shift 2;;
+    --build-directory|--sdk-root|--toolchain-root|--python-executable|--language) hpm_args+=("$1" "${2:?Missing value}"); shift 2;;
     --non-interactive) hpm_args+=("$1"); shift;;
     *) printf 'Unknown parameter: %s\n' "$1" >&2; exit 2;;
   esac
 done
-command -v python3 >/dev/null || { echo 'Python 3.10-3.14 is required on Linux.' >&2; exit 1; }
+command -v python3 >/dev/null || { echo 'An existing Python 3.9+ is required.' >&2; exit 1; }
 hpm_project=$(cd -- "$hpm_project" && pwd)
 [[ -f "$hpm_project/CMakeLists.txt" ]] || { echo 'Project must contain CMakeLists.txt.' >&2; exit 1; }
-hpm_locked=$(python3 - "$hpm_project/hpm-lock.json" <<'PY'
-import json,sys,pathlib
-p=pathlib.Path(sys.argv[1])
-d=json.loads(p.read_text(encoding='utf-8-sig')) if p.exists() else {}
-print('v'+d['wrapper']['version'] if d.get('schema')==2 else '')
-PY
-)
-if [[ -n $hpm_locked ]]; then
-  [[ $hpm_version == latest || $hpm_version == "$hpm_locked" ]] || { echo 'Version differs from project lock.' >&2; exit 1; }
-  hpm_version=$hpm_locked
-elif [[ $hpm_version == latest ]]; then
+if [[ $hpm_version == latest ]]; then
   hpm_version=$(curl -fsSL https://api.github.com/repos/guajun/hpm-cmake/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
 fi
 [[ $hpm_version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid release version.' >&2; exit 1; }

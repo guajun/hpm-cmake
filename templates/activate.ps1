@@ -9,7 +9,6 @@ if ($Deactivate) {
 }
 $local=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'local.json') -Raw -Encoding UTF8|ConvertFrom-Json
 $project=Split-Path -Parent $PSScriptRoot
-if ((Get-FileHash -LiteralPath (Join-Path $project 'hpm-lock.json')).Hash -ne $local.lockSha256) {throw 'Lock changed. Rerun the one-line installer.'}
 if (-not (Test-Path -LiteralPath $local.python) -or -not (Test-Path -LiteralPath (Join-Path $local.toolchain 'bin/riscv32-unknown-elf-gcc.exe'))) {throw 'Local tools missing. Rerun the installer.'}
 $keys=@('PATH','HPM_SDK_BASE','GNURISCV_TOOLCHAIN_PATH','HPM_SDK_TOOLCHAIN_VARIANT')
 if ($state) {foreach ($key in $state.Value.Keys) {[Environment]::SetEnvironmentVariable($key,$state.Value[$key],'Process')}} else {$before=@{};foreach ($key in $keys) {$before[$key]=[Environment]::GetEnvironmentVariable($key,'Process')};Set-Variable HpmFirmwareEnvironment -Scope Global -Value $before}

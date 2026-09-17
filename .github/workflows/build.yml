@@ -14,7 +14,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Initial import, real Git clone, restore and build
+      - name: Maintainer-provided test SDK and tools
+        run: python tests/prepare.py
+      - name: Local-only integration and native build
         run: python tests/integration.py
       - name: Verify website command generation
         run: node tests/command.test.cjs
