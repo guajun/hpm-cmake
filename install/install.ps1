@@ -22,10 +22,21 @@ if (-not (Test-Path -LiteralPath (Join-Path $projectPath 'CMakeLists.txt'))) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectPath 'CMakeLists.txt'))) { throw 'Project must contain CMakeLists.txt.' }
 }
 if ($Version -eq 'latest') {
+    $projectLock=Join-Path $projectPath 'hpm-lock.json'
+    if (Test-Path -LiteralPath $projectLock) {
+        $locked=Get-Content -LiteralPath $projectLock -Raw -Encoding UTF8|ConvertFrom-Json
+        if ($locked.schema -eq 2) { $Version='v'+$locked.wrapper.version }
+    }
+}
+if ($Version -eq 'latest') {
     $release = Invoke-RestMethod "https://api.github.com/repos/$repository/releases/latest"
     $Version = $release.tag_name
 }
 if ($Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?$') { throw 'Invalid release version.' }
+if (Test-Path -LiteralPath (Join-Path $projectPath 'hpm-lock.json')) {
+    $locked=Get-Content -LiteralPath (Join-Path $projectPath 'hpm-lock.json') -Raw -Encoding UTF8|ConvertFrom-Json
+    if ($locked.schema -eq 2 -and $Version -ne ('v'+$locked.wrapper.version)) {throw 'Version differs from hpm-lock.json. Existing locks are not upgraded implicitly.'}
+}
 $base = "https://github.com/$repository/releases/download/$Version"
 $staging = Join-Path $projectPath ('.hpm-cmake-install-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $staging | Out-Null

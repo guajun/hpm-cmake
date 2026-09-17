@@ -1,42 +1,140 @@
 {
-  "schema": 1,
-  "platform": "windows-x86_64",
+  "schema": 2,
+  "wrapper": {
+    "version": "0.3.0"
+  },
   "sdk": {
     "url": "https://github.com/hpmicro/hpm_sdk.git",
     "commit": "375f7cbcd19b0d43453b47ef7c4487a0b2689b37",
     "description": "Known working HPM6E00EVK baseline, v1.12.0 plus three commits"
   },
-  "toolchain": {
-    "version": "13.2.0",
-    "executableSha256": "ae5c103862ed011d63c4db6108b3411536745c4e774946256daada5dea9fb7b2",
-    "release": "2023.10.18",
-    "url": "https://github.com/hpmicro/riscv-gnu-toolchain/releases/download/2023.10.18/rv32imac_zicsr_zifencei_multilib_b_ext-win.zip",
-    "sha256": "794ae8a337db01372fffb5b4abee082ad73c6ef9b665430145ba34b167b7f3f4",
-    "archiveRoot": "rv32imac_zicsr_zifencei_multilib_b_ext-win"
-  },
-  "python": {
-    "version": "3.14.5",
-    "url": "https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip",
-    "sha256": "ba6bd811c4eedb19195cf275770ef127e893d63701e24152606e2cb76f6d876a",
-    "pth": "python314._pth",
-    "stdlib": "python314.zip",
-    "packages": [
-      {
-        "name": "PyYAML", "version": "6.0.3",
-        "url": "https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl",
-        "sha256": "4a2e8cebe2ff6ab7d1050ecd59c25d4c8bd7e6f400f5f82b96557ac0abafd0ac"
+  "platforms": {
+    "windows-x86_64": {
+      "toolchain": {
+        "version": "13.2.0",
+        "executableSha256": "ae5c103862ed011d63c4db6108b3411536745c4e774946256daada5dea9fb7b2",
+        "release": "2023.10.18",
+        "url": "https://github.com/hpmicro/riscv-gnu-toolchain/releases/download/2023.10.18/rv32imac_zicsr_zifencei_multilib_b_ext-win.zip",
+        "sha256": "794ae8a337db01372fffb5b4abee082ad73c6ef9b665430145ba34b167b7f3f4",
+        "archiveRoot": "rv32imac_zicsr_zifencei_multilib_b_ext-win"
       },
-      {
-        "name": "Jinja2", "version": "3.1.6",
-        "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
-        "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
-      },
-      {
-        "name": "MarkupSafe", "version": "3.0.3",
-        "url": "https://files.pythonhosted.org/packages/28/52/182836104b33b444e400b14f797212f720cbc9ed6ba34c800639d154e821/markupsafe-3.0.3-cp314-cp314-win_amd64.whl",
-        "sha256": "bdc919ead48f234740ad807933cdf545180bfbe9342c2bb451556db2ed958581"
+      "python": {
+        "version": "3.14.5",
+        "url": "https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip",
+        "sha256": "ba6bd811c4eedb19195cf275770ef127e893d63701e24152606e2cb76f6d876a",
+        "pth": "python314._pth",
+        "stdlib": "python314.zip",
+        "packages": [
+          {
+            "name": "PyYAML",
+            "version": "6.0.3",
+            "url": "https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl",
+            "sha256": "4a2e8cebe2ff6ab7d1050ecd59c25d4c8bd7e6f400f5f82b96557ac0abafd0ac"
+          },
+          {
+            "name": "Jinja2",
+            "version": "3.1.6",
+            "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+            "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+          },
+          {
+            "name": "MarkupSafe",
+            "version": "3.0.3",
+            "url": "https://files.pythonhosted.org/packages/28/52/182836104b33b444e400b14f797212f720cbc9ed6ba34c800639d154e821/markupsafe-3.0.3-cp314-cp314-win_amd64.whl",
+            "sha256": "bdc919ead48f234740ad807933cdf545180bfbe9342c2bb451556db2ed958581"
+          }
+        ]
       }
-    ]
+    },
+    "linux-x86_64": {
+      "toolchain": {
+        "release": "2023.10.18",
+        "version": "13.2.0",
+        "sha256": "550e867c86d14e0a1fddfde4d9316f7485a396474311c5d8ab61ebff5492ce17",
+        "url": "https://github.com/hpmicro/riscv-gnu-toolchain/releases/download/2023.10.18/rv32imac_zicsr_zifencei_multilib_b_ext-linux.tar.gz",
+        "archiveRoot": "rv32imac_zicsr_zifencei_multilib_b_ext-linux",
+        "executableSha256": "8159b4998c03490985a2cdb1dfb7ffe4fa6318651fab05f5a1b28f7c1eebc540"
+      },
+      "python": {
+        "packages": [
+          {
+            "name": "PyYAML",
+            "version": "6.0.3",
+            "wheels": [
+              {
+                "filename": "pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/7a/1e/7acc4f0e74c4b3d9531e24739e0ab832a5edf40e64fbae1a9c01941cabd7/pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "9c7708761fccb9397fe64bbc0395abcae8c4bf7b0eac081e12b809bf47700d0b"
+              },
+              {
+                "filename": "pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/71/60/917329f640924b18ff085ab889a11c763e0b573da888e8404ff486657602/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d"
+              },
+              {
+                "filename": "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/8b/9d/b3589d3877982d4f2329302ef98a8026e7f4443c765c46cfecc8858c6b4b/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+              },
+              {
+                "filename": "pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/74/27/e5b8f34d02d9995b80abcef563ea1f8b56d20134d8f4e5e81733b1feceb2/pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6"
+              },
+              {
+                "filename": "pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/88/f9/16491d7ed2a919954993e48aa941b200f38040928474c9e85ea9e64222c3/pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "c458b6d084f9b935061bc36216e8a69a7e293a2f1e68bf956dcd9e6cbcd143f5"
+              }
+            ]
+          },
+          {
+            "name": "Jinja2",
+            "version": "3.1.6",
+            "wheels": [
+              {
+                "filename": "jinja2-3.1.6-py3-none-any.whl",
+                "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+                "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+              }
+            ]
+          },
+          {
+            "name": "MarkupSafe",
+            "version": "3.0.3",
+            "wheels": [
+              {
+                "filename": "markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/af/cd/ce6e848bbf2c32314c9b237839119c5a564a59725b53157c856e90937b7a/markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "f42d0984e947b8adf7dd6dde396e720934d12c506ce84eea8476409563607591"
+              },
+              {
+                "filename": "markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/30/ac/0273f6fcb5f42e314c6d8cd99effae6a5354604d461b8d392b5ec9530a54/markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "0bf2a864d67e76e5c9a34dc26ec616a66b9888e25e7b9460e1c76d3293bd9dbf"
+              },
+              {
+                "filename": "markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "d6dd0be5b5b189d31db7cda48b91d7e0a9795f31430b7f271219ab30f1d3ac9d"
+              },
+              {
+                "filename": "markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/a9/21/9b05698b46f218fc0e118e1f8168395c65c8a2c750ae2bab54fc4bd4e0e8/markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "ccfcd093f13f0f0b7fdd0f198b90053bf7b2f02a3927a30e63f3ccc9df56b676"
+              },
+              {
+                "filename": "markupsafe-3.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "url": "https://files.pythonhosted.org/packages/41/3c/a36c2450754618e62008bf7435ccb0f88053e07592e6028a34776213d877/markupsafe-3.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+                "sha256": "457a69a9577064c05a97c41f4e65148652db078a3a509039e64d3467b9e7ef97"
+              }
+            ]
+          }
+        ],
+        "minimum": "3.10",
+        "maximumExclusive": "3.15"
+      }
+    }
   },
   "hostTools": {
     "cmakeMinimum": "3.24.0",

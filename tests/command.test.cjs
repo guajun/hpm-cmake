@@ -12,3 +12,7 @@ const html=fs.readFileSync(require.resolve('../docs/index.html'),'utf8');
 for (const field of fields) assert(html.includes(`id="${field}"`), `missing ${field}`);
 assert(!html.includes('git clone'));
 console.log('PASS: quoted literal PowerShell arguments, one-line non-interactive command, all input fields.');
+const bash=build({Project:"/work/Jane's firmware $(whoami)"},'en','bash');
+assert(bash.includes("--project '/work/Jane'\"'\"'s firmware $(whoami)'"));
+assert(bash.endsWith('--non-interactive'));
+assert(bash.startsWith('bash <(curl -fsSL'));

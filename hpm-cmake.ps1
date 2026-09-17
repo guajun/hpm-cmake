@@ -1,10 +1,4 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param(
-    [Parameter(Mandatory, Position=0)][ValidateSet('import')][string]$Command,
-    [Parameter(Mandatory)][string]$Project,
-    [Parameter(Mandatory)][string]$BuildDirectory,
-    [string]$SdkRevision
-)
-$ErrorActionPreference = 'Stop'
-& "$PSScriptRoot/scripts/import.ps1" -Project $Project -BuildDirectory $BuildDirectory -SdkRevision $SdkRevision
+param([string]$Project='.',[string]$BuildDirectory,[string]$SdkRoot,[string]$ToolchainRoot,[string]$SdkEnvRoot,[string]$SdkRevision,[switch]$NonInteractive,[ValidateSet('en','zh')][string]$Language='en')
+& "$PSScriptRoot/scripts/setup.ps1" @PSBoundParameters

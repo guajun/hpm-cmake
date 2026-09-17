@@ -1,88 +1,93 @@
 # hpm-cmake
 
-[English](README.md) | [简体中文](README.zh-CN.md) · [Website and command builder](https://guajun.github.io/hpm-cmake/)
+[English](README.md) | [中文](README.zh-CN.md) · [One-line installer](https://guajun.github.io/hpm-cmake/)
 
-Generate your application with the official HPMicro tools, then run **one release installer command** in its source folder:
+Project-local environments for **HPM firmware builds**, on Windows x64 and Linux x86_64. Official HPM tools own application/BSP initialization; native CMake owns the build.
+
+## One command, on every machine
+
+In the firmware source directory, run:
+
+**Windows / PowerShell**
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) -Project .
 ```
 
-The installer detects the official build directory and existing SDK/GCC paths. Missing information is requested interactively. It checks the release archive, preserves application CMake/source/BSP files, binds existing tools to this project, and prepares the SDK's private Python. When it finishes:
+**Linux / Bash**
 
-```powershell
-.\activate.ps1
-cmake --preset default
-cmake --build --preset default --parallel
+```bash
+bash <(curl -fsSL https://github.com/guajun/hpm-cmake/releases/latest/download/install.sh) --project .
 ```
 
-Activation changes only the current PowerShell process. Run it in each new terminal. `./activate.ps1 -Deactivate` restores the environment from before activation. CMake presets also supply the project paths directly; activation makes compiler, Python and SDK commands available for other terminal work.
+The command has two modes, selected automatically:
 
-## Prepare the official project
+1. **First import:** no lock exists. Prepare the application with the official [SDK tools](https://github.com/hpmicro/sdk_env) / [native CMake workflow](https://hpm-sdk.readthedocs.io/en/latest/get_started.html), then import its generated `CMakeCache.txt`. The installer records its SDK revision, compiler profile, board and build configuration. Original source and `CMakeLists.txt` are preserved.
+2. **After cloning the firmware repository:** `hpm-lock.json` exists. The same installer reads that lock and restores `.hpm/` for the current machine. No original SDK installation, build cache or generator is required. Existing lock and presets remain byte-for-byte unchanged. Repeating installation is supported.
 
-Download the [official sdk_env](https://github.com/hpmicro/sdk_env/releases). Use `start_gui.exe` or `generate_project` to select the board, application and build type. Keep application sources outside the SDK, using the official [user_template guide](https://github.com/hpmicro/sdk_env/blob/main/user_template/README_en.md) or a copied sample. The generated directory must contain `CMakeCache.txt`.
-
-In the official SDK terminal, for example:
-
-```powershell
-generate_project -b hpm6e00evk -t flash_xip
-```
-
-This example creates `hpm6e00evk_build`. Other boards remain selected by the official tools. hpm-cmake does not initialize applications or generate BSPs.
-
-Requirements: Windows x64, 64-bit PowerShell 5.1+, Git, CMake 3.24+, Ninja, and the official HPM GCC 13.2.0 package. SDK/GCC are reused through project-local directory junctions; keep the selected installations in place. No global command, user/system environment variable, or global Python package is installed.
-
-## Non-interactive installation
-
-Use the [web command builder](https://guajun.github.io/hpm-cmake/#paths) or pass all paths explicitly. Copied form commands always contain `-NonInteractive`, quote PowerShell arguments, and never wait for input.
+Activate when you need the tools in your terminal:
 
 ```powershell
-& ([scriptblock]::Create((irm https://github.com/guajun/hpm-cmake/releases/latest/download/install.ps1))) -Project 'C:\firmware\my-app' -BuildDirectory 'hpm6e00evk_build' -SdkRoot 'C:\HPMicro\sdk_env\hpm_sdk' -ToolchainRoot 'C:\HPMicro\sdk_env\toolchains\rv32imac_zicsr_zifencei_multilib_b_ext-win' -SdkRevision 'v1.12.1' -Version 'v0.2.0' -Language en -NonInteractive
+.\.hpm\activate.ps1
 ```
 
-Replace these example paths and versions with the actual installation. Omit `-SdkRevision` for a Git SDK checkout. For an archive, supply the real upstream tag/full commit: its original contents cannot be verified solely from a version label. `-NonInteractive` belongs to the installer, not the PowerShell executable. Failures identify the missing or ambiguous parameter.
+```bash
+source .hpm/activate.sh
+```
 
-| Parameter | Default / meaning |
+Then `cmake --preset default` and `cmake --build --preset default --parallel`. Activation affects only the current shell; PowerShell `-Deactivate` or Bash `hpm_deactivate` restores its previous environment. Presets also work without activation after installation.
+
+## What goes in Git
+
+| Commit | Do not commit |
 | --- | --- |
-| `-Project <path>` | Current folder (`.`); must contain the original application `CMakeLists.txt`. |
-| `-BuildDirectory <path>` | Detect a unique original build in the project or its usual build folders. Relative to Project. Multiple matches require selection. |
-| `-SdkEnvRoot <path>` | Optional official sdk_env root; supplies SDK/GCC defaults and the `generate_project` command path. |
-| `-SdkRoot <path>` | SDK root containing `cmake/hpm-sdk-config.cmake`. Explicit path wins over build cache and `HPM_SDK_BASE`. |
-| `-ToolchainRoot <path>` | Compiler root containing `bin/riscv32-unknown-elf-gcc.exe`. Otherwise cache, `GNURISCV_TOOLCHAIN_PATH`, or compiler on PATH. |
-| `-SdkRevision <tag-or-commit>` | Required only for an SDK ZIP without Git metadata. Git checkouts use their exact clean commit. |
-| `-Version <version>` | `latest`; use `v0.2.0` to pin this wrapper release. |
-| `-Language en\|zh` | Setup prompt language; default `en`. |
-| `-NonInteractive` | No prompts. Missing or ambiguous input fails with an actionable error. |
+| Firmware sources, BSP and `CMakeLists.txt` | `.hpm/`: SDK/GCC downloads, private Python, local paths, generated activation scripts/CMake hooks |
+| `CMakePresets.json`: board/build configuration, portable across hosts | `build/`: CMake cache and firmware output |
+| `hpm-lock.json`: exact dependency identities and platform artifact hashes | Original machine's vendor build directory and `CMakeUserPresets.json` |
+| `.gitignore` | Machine environment variables |
 
-## What is installed
+**`.hpm/` is the equivalent of `.venv/`.** Delete/recreate it or clone elsewhere and run the same installer. Its generated `.hpm/environment.json` supplies current host paths to the tracked presets. Absolute machine paths never belong in the lock.
 
-```text
-my-app/
-  CMakeLists.txt       # preserved, byte for byte
-  src/                # preserved
-  activate.ps1        # ready to run after installation; commit this
-  CMakePresets.json    # imported official build selection; commit this
-  hpm-lock.json        # fixed versions and artifact checksums; commit this
-  .hpm-cmake/          # project scripts and CMake hooks; commit this
-  .hpm/               # ignored local bindings, private Python, caches
-    sdk/              # link to selected SDK on this machine
-    toolchain/        # link to selected GCC on this machine
-    local.json        # machine paths; never commit
-  build/hpm-default/  # ignored firmware output
-```
+## The lock
 
-SDK and GCC are validated against the imported dependency profile. CPython embeddable 3.14.5 and the SDK packages PyYAML 6.0.3, Jinja2 3.1.6 and MarkupSafe 3.0.3 are downloaded with SHA-256 checks into the project. No uv or Python project metadata is needed. Official IDE generation can create untracked Python bytecode caches inside the SDK; source changes still fail validation.
+`hpm-lock.json` schema 2 pins:
 
-On another machine, the committed scripts and lock remain portable. `./.hpm-cmake/sync.ps1` can download the locked SDK/compiler into an empty `.hpm` and prepare Python; then call `./activate.ps1`. Broken links to a removed installation need to be removed/rebound deliberately, never recursively delete their targets. Sync supports `-Offline` when the necessary checkout/cache is present.
+- Wrapper release version. `latest` installation honors an existing project's pinned wrapper; an explicit conflicting `-Version` / `--version` is rejected.
+- SDK repository and exact commit.
+- Official HPM GCC 13.2.0 packages for Windows and Linux, with download URLs, archive SHA-256 and compiler executable SHA-256.
+- Exact Python package versions and platform wheel hashes (PyYAML 6.0.3, Jinja2 3.1.6, MarkupSafe 3.0.3).
+- Windows private CPython 3.14.5 archive; Linux supported host Python range (3.10–3.14).
 
-The `default` preset preserves official board and build-mode choices, including legacy `CMAKE_BUILD_TYPE=flash_xip` and modern `HPM_BUILD_TYPE=flash_xip`. Additional presets remain normal application CMake configuration. The project hook fixes the vendor's map/linker-path quoting for paths containing spaces without editing SDK source. Existing presets, wrapper files, activation scripts or conflicting CMake hooks are preserved rather than overwritten.
+Linux uses the installed Python to create a private venv without pip; locked wheels are extracted into that environment. The host Python patch version is not pinned, so the lock is not a claim of bit-identical host runtimes. Windows bootstraps its own interpreter. The firmware remains a C/C++ project; no uv or Python project metadata is required.
 
-## Scope and verification
+Updates are deliberate lock changes, not an effect of reinstalling. Unsupported/custom legacy profiles fail instead of silently changing versions.
 
-[HPM6E00 blink](examples/hpm6e00-blink/) remains a hardware-tested example, not an initialization template. RAM execution, Flash verification and power-cycle blinking were tested with J-Link EDU Mini / JTAG / Commander 9.46. HPM6750EVKMINI is additionally build-tested, not hardware-tested. Probe operations remain separate from installation.
+## Explicit paths / agents
 
-Development checks cover official project generation, two boards, release packaging/installation, path discovery, non-interactive failures, interactive selection, argument quoting, process-only activation/deactivation and native builds. Run `scripts/sync.ps1`, then `powershell.exe -NoProfile -File tests/verify.ps1`. No test connects to hardware.
+Append parameters to the one-line command; the [bilingual web form](https://guajun.github.io/hpm-cmake/#paths) quotes them and always generates a non-interactive command.
 
-Official references: [SDK setup](https://hpm-sdk.readthedocs.io/en/latest/get_started.html), [native CMake](https://hpm-sdk.readthedocs.io/en/latest/cmake_quick_start.html), [SDK source](https://github.com/hpmicro/hpm_sdk), [GCC package](https://github.com/hpmicro/riscv-gnu-toolchain/releases/tag/2023.10.18), [Python release](https://www.python.org/downloads/release/python-3145/). The workflow is inspired by [wch-cmake](https://guajun.github.io/wch-cmake/).
+| PowerShell | Bash | Meaning |
+| --- | --- | --- |
+| `-Project <path>` | `--project <path>` | Firmware source directory, default `.` |
+| `-BuildDirectory <path>` | `--build-directory <path>` | **First import only.** Official CMakeCache folder, relative to Project; a unique matching folder is auto-detected |
+| `-SdkRoot <path>` | `--sdk-root <path>` | Optional existing SDK; must match the lock |
+| `-ToolchainRoot <path>` | `--toolchain-root <path>` | Optional existing GCC root; checked against the lock |
+| `-SdkRevision <tag/commit>` | `--sdk-revision <tag/commit>` | Required when explicitly using a vendor SDK archive without Git metadata; declare its real revision |
+| `-Version v0.3.0` | `--version v0.3.0` | Wrapper version; existing project lock takes precedence over `latest` |
+| `-NonInteractive` | `--non-interactive` | Never prompt; missing/ambiguous first-import inputs fail immediately |
 
-This repository is MIT licensed. Downloaded vendor SDK, compilers, runtimes and packages retain their own licenses and are not redistributed in the wrapper release.
+On first import, explicit paths take precedence over the original cache and `HPM_SDK_BASE` / `GNURISCV_TOOLCHAIN_PATH`. On restore, explicit paths override the ignored local binding; without one, dependencies are downloaded from the lock. Stale paths saved by a previous machine are never copied into Git. Existing modified SDKs or mismatched compilers are rejected.
+
+Both hosts need Git, CMake 3.24+ and Ninja. Linux also needs Bash, curl, Python 3.10–3.14 with `venv` support. Only x86_64 Linux is supported by the current compiler profile. No global environment, shell profile or system package installation is performed.
+
+## Upgrade from v0.2
+
+The installer migrates supported schema-1 locks to schema 2 while retaining the SDK revision and Windows dependency versions. It backs up the old lock inside `.hpm/`. Original source stays unchanged. Old `.hpm-cmake/` and root `activate.ps1` are no longer used; remove those generated files from Git tracking, and use `.hpm/activate.ps1`. Review and commit the updated lock and Presets once. Future clones only need the same installer.
+
+## Validation and scope
+
+The repository contains no bundled firmware example or probe/debug scripts. Integration tests use the official SDK's `hello_world` only as a temporary fixture. They import, build, commit just firmware/config/lock, perform a real Git clone, restore without the original build directory, build again, and verify repeated installation and shell activation. Windows, Ubuntu 22.04 and Ubuntu 24.04 run in CI; no test operates hardware.
+
+Official sources: [SDK setup and Linux instructions](https://hpm-sdk.readthedocs.io/en/latest/get_started.html), [HPM SDK](https://github.com/hpmicro/hpm_sdk), [official GCC releases](https://github.com/hpmicro/riscv-gnu-toolchain/releases/tag/2023.10.18), [Python](https://www.python.org/downloads/release/python-3145/). Structure and workflow inspired by [wch-cmake](https://guajun.github.io/wch-cmake/).
+
+MIT license applies to this wrapper. Downloaded dependencies retain their upstream licenses and are not included in wrapper release assets.

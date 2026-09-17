@@ -1,4 +1,4 @@
-name: Windows build
+name: Firmware environment
 on:
   push:
   pull_request:
@@ -7,18 +7,14 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Prepare project dependencies
-        shell: pwsh
-        run: ./scripts/sync.ps1
-      - name: Verify Windows PowerShell 5.1 and native builds
-        shell: powershell
-        run: ./tests/verify.ps1
-      - name: Verify PowerShell 7
-        shell: pwsh
-        run: ./scripts/doctor.ps1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Initial import, real Git clone, restore and build
+        run: python tests/integration.py
       - name: Verify website command generation
-        shell: pwsh
         run: node tests/command.test.cjs
